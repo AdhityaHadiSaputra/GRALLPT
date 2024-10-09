@@ -553,7 +553,7 @@ print(noitemScannedResults);
               DataColumn(label: Text('Total Scanned')),
             ],
             rows: [
-              ...recentPOSummary.map((detail) {
+              ...recentPOSummary.reversed.map((detail) {
                 return DataRow(cells: [
                   DataCell(Text(detail['item_sku'] ?? '')),
                   DataCell(Text(detail['item_name'] ?? '')),
@@ -598,7 +598,7 @@ print(noitemScannedResults);
               DataColumn(label: Text('Total Scanned')),
             ],
             rows: [
-                                  ...recentMasterPOSummary.map(
+                                  ...recentMasterPOSummary.reversed.map(
                                         (detail) => DataRow(
                                       cells: [
                   DataCell(Text(detail['item_sku'] ?? '')),
@@ -611,7 +611,7 @@ print(noitemScannedResults);
                                     ),
                                   ),
                                   
-                                  ...recentNoPOSummary.map(
+                                  ...recentNoPOSummary.reversed.map(
                                         (detail) => DataRow(
                                       cells: [
                   DataCell(Text(detail['item_sku'] ?? '')),

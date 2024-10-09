@@ -67,44 +67,48 @@ class _ScanQRDefectPageState extends State<ScanQRDefectPage> {
     await _audioPlayer.play(AssetSource('beep.mp3'));
   }
 
-  Future<void> fetchPOData(String pono) async {
+   Future<void> fetchPOData(String pono) async {
     setState(() => isLoading = true);
     try {
       final userData = storageService.get(StorageKeys.USER);
       final response = await apiservice.loginUser(
         userData['USERID'],
         userData['USERPASSWORD'],
-        userData['PT']
+        userData['PT'],
       );
+
       if (response.containsKey('code')) {
         final resultCode = response['code'];
 
-        setState(() {
-          if (resultCode == "1") {
-            final List<dynamic> msgList = response['msg'];
-            if (msgList.isNotEmpty && msgList[0] is Map<String, dynamic>) {
-              final Map<String, dynamic> msgMap =
-              msgList[0] as Map<String, dynamic>;
-              userId = msgMap[
-              'USERID'];
-            }
-          } else {
-            print('Request failed with code $resultCode');
-            print(response["msg"]);
+        if (resultCode == "1") {
+          final List<dynamic> msgList = response['msg'];
+          if (msgList.isNotEmpty && msgList[0] is Map<String, dynamic>) {
+            final Map<String, dynamic> msgMap = msgList[0] as Map<String, dynamic>;
+            userId = msgMap['USERID'];
           }
-        });
+        } else {
+          print('Request failed with code $resultCode');
+          print(response["msg"]);
+        }
       } else {
         print('Unexpected response structure');
       }
     } catch (error) {
       print('Error: $error');
     }
+
     try {
       final response = await apiuser.fetchPO(pono);
 
       if (response.containsKey('code') && response['code'] == '1') {
         final msg = response['msg'];
         final headerPO = msg['HeaderPO'];
+        
+        // Check if headerPO is empty to determine if the PO exists
+        if (headerPO.isEmpty) {
+          throw Exception('Nomor PO tidak ditemukan!'); // PO not found
+        }
+
         final localPOs =
         await dbHelper.getPODefectScannedODetails(headerPO[0]['PONO']);
         final scannedPOs =
@@ -114,6 +118,9 @@ class _ScanQRDefectPageState extends State<ScanQRDefectPage> {
         final NoPOs =
         await dbHelper.getPODefectNoScannedDetails(headerPO[0]['PONO']);
 
+        scannedPOs.sort((a, b) {
+          return DateTime.parse(b['scandate']).compareTo(DateTime.parse(a['scandate']));
+        });
 
         scannedResults = [...scannedPOs];
         masterScannedResults = [...MasterPOs];
@@ -123,13 +130,11 @@ class _ScanQRDefectPageState extends State<ScanQRDefectPage> {
         setState(() {
           detailPOData = detailPOList.map((item) {
             final product = localPOs.firstWhereOrNull((product) =>
-            product["barcode"] == item["BARCODENO"] ||
-            product["vendorbarcode"] == item["VENDORBARCODE"]);
+                product["barcode"] == item["BARCODENO"] ||
+                product["vendorbarcode"] == item["VENDORBARCODE"]);
             if (product != null) {
               item["QTYD"] = product["qty_different"];
-              item["QTYS"] = scannedPOs.isNotEmpty
-                  ? scannedPOs.length
-                  : product["qty_scanned"];
+              item["QTYS"] = scannedPOs.isNotEmpty ? scannedPOs.length : product["qty_scanned"];
             }
             return item;
           }).toList();
@@ -145,8 +150,12 @@ class _ScanQRDefectPageState extends State<ScanQRDefectPage> {
   }
 
   void _showErrorSnackBar(String message) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
+    Flushbar(
+      message: message,
+      duration: Duration(seconds: 3),
+      flushbarPosition: FlushbarPosition.TOP,
+      backgroundColor: Colors.red,
+    ).show(context);
   }
 
   Future<void> submitDataToDatabase() async {
@@ -290,7 +299,7 @@ class _ScanQRDefectPageState extends State<ScanQRDefectPage> {
       };
 
       // Add to scanned results
-      scannedResults.add(mappedPO);
+      scannedResults.insert(0, mappedPO);
 
       // Update the item in the PO and submit results
       await Future.wait([
@@ -320,7 +329,7 @@ class _ScanQRDefectPageState extends State<ScanQRDefectPage> {
           'type': scannedPOType,
         };
 
-        masterScannedResults.add(mappedMasterItem);
+        masterScannedResults.insert(0, mappedMasterItem);
              await Future.wait([
        savePOToRecent(_poNumberController.text),
         submitMasterResults(),
@@ -347,7 +356,7 @@ class _ScanQRDefectPageState extends State<ScanQRDefectPage> {
             'type': scannedPOType,
           };
 
-          noitemScannedResults.add(manualMasterItem);
+          noitemScannedResults.insert(0, manualMasterItem);
              await Future.wait([
        savePOToRecent(_poNumberController.text),
         submitNoResults(),
@@ -395,6 +404,70 @@ class _ScanQRDefectPageState extends State<ScanQRDefectPage> {
       },
     );
   }
+
+  
+Future<void> updateScannedQty(Map<String, dynamic> item) async {
+  // Create a mutable copy of the item
+  Map<String, dynamic> mutableItem = Map.from(item);
+
+  // Create a TextEditingController and initialize with the current qty_scanned
+  TextEditingController qtyController = TextEditingController(
+    text: mutableItem['qty_scanned'].toString(),
+  );
+
+  // Prompt the user for the new quantity
+  String? newQtyString = await showDialog<String>(
+    context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: Text('Update Scanned Quantity'),
+        content: TextField(
+          controller: qtyController, // Set the controller here
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(
+            labelText: 'Enter New Scanned Quantity',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop(null);
+            },
+            child: Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop(qtyController.text); // Return the input text
+            },
+            child: Text('Save'),
+          ),
+        ],
+      );
+    },
+  );
+
+  // If user input a valid quantity, update the item
+  if (newQtyString != null && newQtyString.isNotEmpty) {
+    int newQty = int.tryParse(newQtyString) ?? 0;
+
+    // Update the quantity in the mutable copy
+    setState(() {
+      mutableItem['qty_scanned'] = newQty;
+
+      // Find the original item index in scannedResults
+      int index = scannedResults.indexWhere((result) => result['barcode'] == item['barcode']);
+      if (index != -1) {
+        // Update the scannedResults list with the mutable copy
+        scannedResults[index] = mutableItem; // Update with the modified item
+      }
+    });
+
+    // Optionally update the database or do additional actions here
+    await submitScannedResults();
+    await submitMasterResults();
+    await submitNoResults(); // Update the database with new quantities
+  }
+}
 
   Future<void> submitScannedResults() async {
     final allPOs = [...scannedResults];
@@ -515,51 +588,60 @@ Future<void> updatePO(Map<String, dynamic> item) async {
                         ),
                       ),
                       ElevatedButton(
-                        onPressed: () async {
-                          String poNumber = _poNumberController.text.trim();
-                          if (poNumber.isNotEmpty) {
-                            // Tampilkan loading indicator (optional)
-                            setState(() {
-                              isLoading = true;
-                            });
+          onPressed: () async {
+            String poNumber = _poNumberController.text.trim();
+            if (poNumber.isNotEmpty) {
+              // Show loading indicator
+              setState(() {
+                isLoading = true;
+                // Reset data before fetching new data
+                scannedResults.clear();
+                masterScannedResults.clear();
+                noitemScannedResults.clear();
+                detailPOData.clear();
+              });
 
-                            try {
-                              // Memanggil fungsi fetchPOData dan menunggu hasilnya
-                              await fetchPOData(poNumber);
-
-                              // Setelah berhasil memanggil data PO, tampilkan notifikasi
-                              Flushbar(
-                                message: 'PO berhasil terpanggil!',
-                                duration: Duration(seconds: 3),
-                                flushbarPosition: FlushbarPosition.TOP,
-                                backgroundColor: Colors.green,
-                              ).show(context);
-                            } catch (e) {
-                              // Tampilkan pesan error jika ada masalah
-                              Flushbar(
-                                message: 'Terjadi kesalahan: $e',
-                                duration: Duration(seconds: 3),
-                                flushbarPosition: FlushbarPosition.TOP,
-                                backgroundColor: Colors.red,
-                              ).show(context);
-                            } finally {
-                              // Sembunyikan loading indicator setelah data diproses
-                              setState(() {
-                                isLoading = false;
-                              });
-                            }
-                          } else {
-                            // Tampilkan notifikasi jika input nomor PO kosong
-                            Flushbar(
-                              message: 'Silakan masukkan nomor PO yang valid',
-                              duration: Duration(seconds: 3),
-                              flushbarPosition: FlushbarPosition.TOP,
-                              backgroundColor: Colors.red,
-                            ).show(context);
-                          }
-                        },
-                        child: const Icon(Icons.search),
-                      ),
+              try {
+                // Fetch PO data
+                await fetchPOData(poNumber);
+                
+                // Only show success message if data is valid
+                if (detailPOData.isNotEmpty) {
+                  Flushbar(
+                    message: 'PO berhasil terpanggil!',
+                    duration: Duration(seconds: 3),
+                    flushbarPosition: FlushbarPosition.TOP,
+                    backgroundColor: Colors.green,
+                  ).show(context);
+                } else {
+                  throw Exception('Nomor PO tidak ditemukan!'); // Trigger error notification
+                }
+              } catch (e) {
+                // Handle different error messages
+                Flushbar(
+                  message: e.toString(),
+                  duration: Duration(seconds: 3),
+                  flushbarPosition: FlushbarPosition.TOP,
+                  backgroundColor: Colors.red,
+                ).show(context);
+              } finally {
+                // Hide loading indicator
+                setState(() {
+                  isLoading = false;
+                });
+              }
+            } else {
+              // Show error if PO number input is empty
+              Flushbar(
+                message: 'Silakan masukkan nomor PO yang valid',
+                duration: Duration(seconds: 3),
+                flushbarPosition: FlushbarPosition.TOP,
+                backgroundColor: Colors.red,
+              ).show(context);
+            }
+          },
+          child: const Icon(Icons.search),
+        ),
                     ],
                   ),
                   const SizedBox(height: 20),
@@ -631,66 +713,144 @@ Future<void> updatePO(Map<String, dynamic> item) async {
                                   DataColumn(label: Text('Device')),
                                   DataColumn(label: Text('QTY Koli')),
                                   DataColumn(label: Text('Timestamp')),
-
+                                  // DataColumn(label: Text('Actions')),
 
                                 ],
                                 rows: [
-                                  ...scannedResults.map(
-                                        (result) => DataRow(
-                                      cells: [
+  ...scannedResults.map(
+    (result) {
+      // Create a mutable copy of the result
+      Map<String, dynamic> mutableResult = Map.from(result);
 
-                                        DataCell(Text(result['pono'] ?? '')),
-                                        DataCell(Text(result['item_sku'] ?? '')),
-                                        DataCell(Text(result['item_name'] ?? '')),
-                                        DataCell(Text(result['barcode'] ?? '')),
-                                        DataCell(Text(result['vendorbarcode'] ?? '')),
-                                        DataCell(Text(result['qty_scanned'].toString())),
-                                        DataCell(Text(result['user'] ?? '')),
-                                        DataCell(Text(result['device_name'] ?? '')),
-                                        DataCell(Text(result['qty_koli'].toString())),
-                                        DataCell(Text(result['scandate'] ?? '')),
+      return DataRow(
+        cells: [
+          DataCell(Text(mutableResult['pono'] ?? '')),
+          DataCell(Text(mutableResult['item_sku'] ?? '')),
+          DataCell(Text(mutableResult['item_name'] ?? '')),
+          DataCell(Text(mutableResult['barcode'] ?? '')),
+          DataCell(Text(mutableResult['vendorbarcode'] ?? '')),
+          DataCell(
+            TextFormField(
+              initialValue: mutableResult['qty_scanned'].toString(),
+              keyboardType: TextInputType.number,
+              onFieldSubmitted: (newValue) {
+                // Update the scanned quantity directly
+                int? updatedQty = int.tryParse(newValue);
+                if (updatedQty != null) {
+                  setState(() {
+                    mutableResult['qty_scanned'] = updatedQty;
+                    int index = scannedResults.indexWhere((r) => r['barcode'] == result['barcode']);
+                    if (index != -1) {
+                      scannedResults[index] = mutableResult;
+                    }
 
-                                      ],
-                                    ),
-                                  ),
-                                  ...masterScannedResults.map(
-                                        (result) => DataRow(
-                                      cells: [
+                    // Optional: Update backend with new quantity
+                    submitScannedResults();
+                    submitMasterResults();
+                    submitNoResults();
+                  });
+                }
+              },
+            ),
+          ),
+          DataCell(Text(mutableResult['user'] ?? '')),
+          DataCell(Text(mutableResult['device_name'] ?? '')),
+          DataCell(Text(mutableResult['qty_koli'].toString())),
+          DataCell(Text(mutableResult['scandate'] ?? '')),
+        ],
+      );
+    },
+  ),
+  ...masterScannedResults.map(
+    (result) {
+      // Create a mutable copy of the result
+      Map<String, dynamic> mutableResult = Map.from(result);
 
-                                        DataCell(Text(result['pono'] ?? '')),
-                                        DataCell(Text(result['item_sku'] ?? '')),
-                                        DataCell(Text(result['item_name'] ?? '')),
-                                        DataCell(Text(result['barcode'] ?? '')),
-                                        DataCell(Text(result['vendorbarcode'] ?? '')),
-                                        DataCell(Text(result['qty_scanned'].toString())),
-                                        DataCell(Text(result['user'] ?? '')),
-                                        DataCell(Text(result['device_name'] ?? '')),
-                                        DataCell(Text(result['qty_koli'].toString())),
-                                        DataCell(Text(result['scandate'] ?? '')),
+      return DataRow(
+        cells: [
+          DataCell(Text(mutableResult['pono'] ?? '')),
+          DataCell(Text(mutableResult['item_sku'] ?? '')),
+          DataCell(Text(mutableResult['item_name'] ?? '')),
+          DataCell(Text(mutableResult['barcode'] ?? '')),
+          DataCell(Text(mutableResult['vendorbarcode'] ?? '')),
+          DataCell(
+            TextFormField(
+              initialValue: mutableResult['qty_scanned'].toString(),
+              keyboardType: TextInputType.number,
+              onFieldSubmitted: (newValue) {
+                // Update the scanned quantity directly
+                int? updatedQty = int.tryParse(newValue);
+                if (updatedQty != null) {
+                  setState(() {
+                    mutableResult['qty_scanned'] = updatedQty;
+                    int index = masterScannedResults.indexWhere((r) => r['barcode'] == result['barcode']);
+                    if (index != -1) {
+                      masterScannedResults[index] = mutableResult;
+                    }
 
-                                      ],
-                                    ),
-                                  ),
-                                  ...noitemScannedResults.map(
-                                        (result) => DataRow(
-                                      cells: [
+                    // Optional: Update backend with new quantity
+                    submitScannedResults();
+                   submitMasterResults();
+                    submitNoResults();
+                  });
+                }
+              },
+            ),
+          ),
+          DataCell(Text(mutableResult['user'] ?? '')),
+          DataCell(Text(mutableResult['device_name'] ?? '')),
+          DataCell(Text(mutableResult['qty_koli'].toString())),
+          DataCell(Text(mutableResult['scandate'] ?? '')),
+        ],
+      );
+    },
+  ),
+  ...noitemScannedResults.map(
+    (result) {
+      // Create a mutable copy of the result
+      Map<String, dynamic> mutableResult = Map.from(result);
 
-                                        DataCell(Text(result['pono'] ?? '')),
-                                        DataCell(Text(result['item_sku'] ?? '')),
-                                        DataCell(Text(result['item_name'] ?? '')),
-                                        DataCell(Text(result['barcode'] ?? '')),
-                                        DataCell(Text(result['vendorbarcode'] ?? '')),
-                                        DataCell(Text(result['qty_scanned'].toString())),
-                                        DataCell(Text(result['user'] ?? '')),
-                                        DataCell(Text(result['device_name'] ?? '')),
-                                        DataCell(Text(result['qty_koli'].toString())),
-                                        DataCell(Text(result['scandate'] ?? '')),
+      return DataRow(
+        cells: [
+          DataCell(Text(mutableResult['pono'] ?? '')),
+          DataCell(Text(mutableResult['item_sku'] ?? '')),
+          DataCell(Text(mutableResult['item_name'] ?? '')),
+          DataCell(Text(mutableResult['barcode'] ?? '')),
+          DataCell(Text(mutableResult['vendorbarcode'] ?? '')),
+          DataCell(
+            TextFormField(
+              initialValue: mutableResult['qty_scanned'].toString(),
+              keyboardType: TextInputType.number,
+              onFieldSubmitted: (newValue) {
+                // Update the scanned quantity directly
+                int? updatedQty = int.tryParse(newValue);
+                if (updatedQty != null) {
+                  setState(() {
+                    mutableResult['qty_scanned'] = updatedQty;
+                    int index = noitemScannedResults.indexWhere((r) => r['barcode'] == result['barcode']);
+                    if (index != -1) {
+                      noitemScannedResults[index] = mutableResult;
+                    }
 
-                                      ],
-                                    ),
-                                  ),
+                    // Optional: Update backend with new quantity
+                    submitScannedResults();
+                    submitMasterResults();
+                    submitNoResults();
+                  });
+                }
+              },
+            ),
+          ),
+          DataCell(Text(mutableResult['user'] ?? '')),
+          DataCell(Text(mutableResult['device_name'] ?? '')),
+          DataCell(Text(mutableResult['qty_koli'].toString())),
+          DataCell(Text(mutableResult['scandate'] ?? '')),
+        ],
+      );
+    },
+  ),
+]
 
-                                ],
                                 
                               ),
                             ),

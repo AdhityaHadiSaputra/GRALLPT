@@ -481,6 +481,7 @@ if (noitemScannedResults.isNotEmpty) {
           Text(
             grandTotal.toString(),
             style: const TextStyle(
+              
               fontWeight: FontWeight.bold,
               fontSize: 16,
             ),
@@ -507,6 +508,7 @@ if (noitemScannedResults.isNotEmpty) {
            Text(
              calculateGrandTotal().toString(),
             style: const TextStyle(
+              color: Colors.red,
               fontWeight: FontWeight.bold,
               fontSize: 16,
             ),
@@ -537,7 +539,7 @@ if (noitemScannedResults.isNotEmpty) {
             DataColumn(label: Text('Total Scanned')),
           ],
           rows: [
-            ...recentPOSummary.map((detail) {
+            ...recentPOSummary.reversed.map((detail) {
               return DataRow(cells: [
                 DataCell(Text(detail['item_sku'] ?? '')),
                 DataCell(Text(detail['item_name'] ?? '')),
@@ -579,7 +581,7 @@ Widget buildRecentNoPOSummary() {
             DataColumn(label: Text('Total Scanned')),
           ],
           rows: [
-            ...recentNoPOSummary.map((detail) {
+            ...recentNoPOSummary.reversed.map((detail) {
               return DataRow(cells: [
                 DataCell(Text(detail['item_sku'] ?? '')),
                 DataCell(Text(detail['item_name'] ?? '')),
@@ -588,7 +590,7 @@ Widget buildRecentNoPOSummary() {
                 DataCell(Text(detail['totalscan']?.toString() ?? '0')),
               ]);
             }).toList(),
-            ...recentMasterPOSummary.map((detail) {
+            ...recentMasterPOSummary.reversed.map((detail) {
               return DataRow(cells: [
                 DataCell(Text(detail['item_sku'] ?? '')),
                 DataCell(Text(detail['item_name'] ?? '')),
@@ -633,7 +635,7 @@ Widget buildRecentNoPOSummary() {
                   //       scrollDirection: Axis.horizontal,
                   //       child: DataTable(
                   //         columns: const [
-                  
+                  //
                   //           DataColumn(label: Text('PO NO')),
                   //           DataColumn(label: Text('Item SKU')),
                   //           DataColumn(label: Text('Item SKU Name')),
@@ -646,18 +648,18 @@ Widget buildRecentNoPOSummary() {
                   //           DataColumn(label: Text('MachineCd')),
                   //           DataColumn(label: Text('QTY Koli')),
                   //           DataColumn(label: Text('Actions')),
-                  
-                  
+                  //
+                  //
                   //         ],
-                  //         rows: masterScannedResults.map((detail) {
+                  //         rows: scannedResults.map((detail) {
                   //           return DataRow(cells: [
-                  
+                  //
                   //             DataCell(Text(detail['pono'] ?? '')),
                   //             DataCell(Text(detail['item_sku'] ?? '')),
                   //             DataCell(Text(detail['item_name'] ?? '')),
                   //             DataCell(Text(detail['vendorbarcode'] ?? '')),
                   //             DataCell(Text(detail['barcode'] ?? '')),
-                  
+                  //
                   //             DataCell(Text((detail['qty_scanned'] ?? 0)
                   //                 .toString())),
                   //             DataCell(Text(detail['user'] ?? '')),
@@ -678,15 +680,15 @@ Widget buildRecentNoPOSummary() {
                   //                     },
                   //                     child: Icon(Icons.delete),
                   //                   ),
-                  
+                  //
                   //           ])
                   //             )
                   //           ]);
                   //         }).toList(),
                   //       ),
-                  
+                  //
                   //     ),
-
+                  //
                   //     SingleChildScrollView(
                   // scrollDirection: Axis.vertical,
                   // child: Column(
@@ -736,14 +738,14 @@ Widget buildRecentNoPOSummary() {
                   //                     },
                   //                     child: Icon(Icons.delete),
                   //                   ),
-                                    
-                                    
+                  //
+                  //
                   //           ])
                   //             )
                   //           ]);
                   //         }).toList(),
                   //       ),
-                        
+                  //
                   //     ),
                       
                       SizedBox(height: 20), // Add some spacing
@@ -758,6 +760,8 @@ Widget buildRecentNoPOSummary() {
                     ],
                   ),
               )
+
+
     );
                 // )]))])));
     //                 ]

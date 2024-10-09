@@ -67,7 +67,7 @@ class _ScanQRPageState extends State<ScanQRPage> {
     await _audioPlayer.play(AssetSource('beep.mp3'));
   }
 
-  Future<void> fetchPOData(String pono) async {
+    Future<void> fetchPOData(String pono) async {
     setState(() => isLoading = true);
     try {
       final userData = storageService.get(StorageKeys.USER);
@@ -76,43 +76,47 @@ class _ScanQRPageState extends State<ScanQRPage> {
         userData['USERPASSWORD'],
         userData['PT'],
       );
+
       if (response.containsKey('code')) {
         final resultCode = response['code'];
 
-        setState(() {
-          if (resultCode == "1") {
-            final List<dynamic> msgList = response['msg'];
-            if (msgList.isNotEmpty && msgList[0] is Map<String, dynamic>) {
-              final Map<String, dynamic> msgMap =
-                  msgList[0] as Map<String, dynamic>;
-              userId = msgMap[
-                  'USERID'];
-            }
-          } else {
-            print('Request failed with code $resultCode');
-            print(response["msg"]);
+        if (resultCode == "1") {
+          final List<dynamic> msgList = response['msg'];
+          if (msgList.isNotEmpty && msgList[0] is Map<String, dynamic>) {
+            final Map<String, dynamic> msgMap = msgList[0] as Map<String, dynamic>;
+            userId = msgMap['USERID'];
           }
-        });
+        } else {
+          print('Request failed with code $resultCode');
+          print(response["msg"]);
+        }
       } else {
         print('Unexpected response structure');
       }
     } catch (error) {
       print('Error: $error');
     }
+
     try {
       final response = await apiuser.fetchPO(pono);
 
       if (response.containsKey('code') && response['code'] == '1') {
         final msg = response['msg'];
         final headerPO = msg['HeaderPO'];
-        final localPOs =
-            await dbHelper.getPOScannedODetails(headerPO[0]['PONO']);
-        final scannedPOs =
-            await dbHelper.getPOResultScannedDetails(headerPO[0]['PONO']);
-        final differentPOs =
-            await dbHelper.getPODifferentScannedDetails(headerPO[0]['PONO']);
-        final noitemScanned =
-            await dbHelper.getPONOItemsScannedDetails(headerPO[0]['PONO']);
+        
+        // Check if headerPO is empty to determine if the PO exists
+        if (headerPO.isEmpty) {
+          throw Exception('Nomor PO tidak ditemukan!'); // PO not found
+        }
+
+        final localPOs = await dbHelper.getPOScannedODetails(headerPO[0]['PONO']);
+        final scannedPOs = await dbHelper.getPOResultScannedDetails(headerPO[0]['PONO']);
+        final differentPOs = await dbHelper.getPODifferentScannedDetails(headerPO[0]['PONO']);
+        final noitemScanned = await dbHelper.getPONOItemsScannedDetails(headerPO[0]['PONO']);
+
+        scannedPOs.sort((a, b) {
+          return DateTime.parse(b['scandate']).compareTo(DateTime.parse(a['scandate']));
+        });
 
         scannedResults = [...scannedPOs];
         differentScannedResults = [...differentPOs];
@@ -120,15 +124,13 @@ class _ScanQRPageState extends State<ScanQRPage> {
         final detailPOList = List<Map<String, dynamic>>.from(msg['DetailPO']);
 
         setState(() {
-            detailPOData = detailPOList.map((item) {
+          detailPOData = detailPOList.map((item) {
             final product = localPOs.firstWhereOrNull((product) =>
                 product["barcode"] == item["BARCODENO"] ||
                 product["vendorbarcode"] == item["VENDORBARCODE"]);
             if (product != null) {
               item["QTYD"] = product["qty_different"];
-              item["QTYS"] = scannedPOs.isNotEmpty
-                  ? scannedPOs.length
-                  : product["qty_scanned"];
+              item["QTYS"] = scannedPOs.isNotEmpty ? scannedPOs.length : product["qty_scanned"];
             }
             return item;
           }).toList();
@@ -144,8 +146,12 @@ class _ScanQRPageState extends State<ScanQRPage> {
   }
 
   void _showErrorSnackBar(String message) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
+    Flushbar(
+      message: message,
+      duration: Duration(seconds: 3),
+      flushbarPosition: FlushbarPosition.TOP,
+      backgroundColor: Colors.red,
+    ).show(context);
   }
 
   Future<void> submitDataToDatabase() async {
@@ -252,7 +258,7 @@ Future<void> checkAndSumQty(String scannedCode) async {
 
     print("PO Qty: $poQty, Scanned Qty: $scannedQty, Current QtyD: $currentQtyD");
 
-    int newScannedQty = 1;
+    int newScannedQty =  1;
 
     // Prevent over-scanning beyond the PO quantity
     if (newScannedQty > poQty) {
@@ -284,18 +290,18 @@ Future<void> checkAndSumQty(String scannedCode) async {
       'scandate': itemInPO['scandate'],
       'user': userId,
       'qty_koli': int.tryParse(_koliController.text.trim()) ?? 0,
-      'status': itemInPO['QTYD'] != 0 ? 'scanned' : 'scanned',
+      'status': 'scanned',
       'type': scannedPOType,
     };
 
     // Add to scanned results
-    scannedResults.add(mappedPO);
+    scannedResults.insert(0, mappedPO);
 
     // Update the item in the PO and submit results
-    await Future.wait([
-      updatePO(itemInPO),
-      submitScannedResults(),
-    ]);
+    setState(() {});
+      await updatePO(itemInPO);
+      await submitScannedResults();
+    
   } else {
     // If item not found in PO, check master items and handle accordingly
     final masterItem = await fetchMasterItem(scannedCode);
@@ -319,11 +325,10 @@ Future<void> checkAndSumQty(String scannedCode) async {
         'type': scannedPOType,
       };
 
-      differentScannedResults.add(mappedMasterItem);
-         await Future.wait([
-
-        submitScannedMasterItemsResults(),
-      ]);
+     differentScannedResults.insert(0, mappedMasterItem);
+      savePOToRecent(_poNumberController.text);
+      setState(() {});
+      await submitScannedMasterItemsResults();
     } else {
       // If item not found in both PO and Master items, prompt for manual input
       final itemName = await _promptManualItemNameInput(scannedCode);
@@ -346,15 +351,14 @@ Future<void> checkAndSumQty(String scannedCode) async {
           'type': scannedPOType,
         };
 
-        noitemScannedResults.add(manualMasterItem);
-         await Future.wait([
-
-        submitScannedNoItemsResults(),
-      ]);
+       noitemScannedResults.insert(0, manualMasterItem);
+        savePOToRecent(_poNumberController.text);
+        setState(() {});
+        await submitScannedNoItemsResults();
       } else {
         print("Manual item name input was cancelled.");
       }
-    }
+    } 
   }
 }
 
@@ -403,9 +407,7 @@ Future<String?> _promptManualItemNameInput(String scannedCode) async {
           result); // Assuming you have a method for this
     }
     
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Scanned results saved successfully')),
-    );
+   
   }
   Future<void> submitScannedMasterItemsResults() async {
     final allPOs = [...differentScannedResults];
@@ -413,10 +415,14 @@ Future<String?> _promptManualItemNameInput(String scannedCode) async {
       await dbHelper.insertOrUpdateScannedMasterItemsResults(
           result); // Assuming you have a method for this
     }
+    Flushbar(
+        message: 'Unrecognize Po Data Save',
+        duration: Duration(seconds: 3),
+        flushbarPosition: FlushbarPosition.TOP,
+        backgroundColor: Colors.green,
+    ).show(context);
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Scanned No Item results saved successfully')),
-    );
+   
   }
   Future<void> submitScannedNoItemsResults() async {
     final allPOs = [...noitemScannedResults];
@@ -424,10 +430,14 @@ Future<String?> _promptManualItemNameInput(String scannedCode) async {
       await dbHelper.insertOrUpdateScannedNoItemsResults(
           result); // Assuming you have a method for this
     }
+    Flushbar(
+        message: 'Unrecognize Po Data Save',
+        duration: Duration(seconds: 3),
+        flushbarPosition: FlushbarPosition.TOP,
+        backgroundColor: Colors.green,
+    ).show(context);
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Scanned No Item results saved successfully')),
-    );
+ 
   }
 
 Future<Map<String, dynamic>?> fetchMasterItem(String scannedCode) async {
@@ -446,6 +456,70 @@ Future<Map<String, dynamic>?> fetchMasterItem(String scannedCode) async {
     return null;
   }
 }
+
+Future<void> updateScannedQty(Map<String, dynamic> item) async {
+  // Create a mutable copy of the item
+  Map<String, dynamic> mutableItem = Map.from(item);
+
+  // Create a TextEditingController and initialize with the current qty_scanned
+  TextEditingController qtyController = TextEditingController(
+    text: mutableItem['qty_scanned'].toString(),
+  );
+
+  // Prompt the user for the new quantity
+  String? newQtyString = await showDialog<String>(
+    context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: Text('Update Scanned Quantity'),
+        content: TextField(
+          controller: qtyController, // Set the controller here
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(
+            labelText: 'Enter New Scanned Quantity',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop(null);
+            },
+            child: Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop(qtyController.text); // Return the input text
+            },
+            child: Text('Save'),
+          ),
+        ],
+      );
+    },
+  );
+
+  // If user input a valid quantity, update the item
+  if (newQtyString != null && newQtyString.isNotEmpty) {
+    int newQty = int.tryParse(newQtyString) ?? 0;
+
+    // Update the quantity in the mutable copy
+    setState(() {
+      mutableItem['qty_scanned'] = newQty;
+
+      // Find the original item index in scannedResults
+      int index = scannedResults.indexWhere((result) => result['barcode'] == item['barcode']);
+      if (index != -1) {
+        // Update the scannedResults list with the mutable copy
+        scannedResults[index] = mutableItem; // Update with the modified item
+      }
+    });
+
+    // Optionally update the database or do additional actions here
+    await submitScannedResults();
+    await submitScannedMasterItemsResults();
+    await submitScannedNoItemsResults(); // Update the database with new quantities
+  }
+}
+
 
 
   Future<void> updatePO(Map<String, dynamic> item) async {
@@ -501,52 +575,63 @@ Future<Map<String, dynamic>?> fetchMasterItem(String scannedCode) async {
                     ),
                   ),
                 ),
-                ElevatedButton(
-                onPressed: () async {
-                  String poNumber = _poNumberController.text.trim();
-                  if (poNumber.isNotEmpty) {
-                    // Tampilkan loading indicator (optional)
-                    setState(() {
-                      isLoading = true;
-                    });
+                    ElevatedButton(
+          onPressed: () async {
+            String poNumber = _poNumberController.text.trim();
+            if (poNumber.isNotEmpty) {
+              // Show loading indicator
+              setState(() {
+                isLoading = true;
+                // Reset data before fetching new data
+                scannedResults.clear();
+                differentScannedResults.clear();
+                noitemScannedResults.clear();
+                detailPOData.clear();
+              });
 
-                    try {
-                      // Memanggil fungsi fetchPOData dan menunggu hasilnya
-                      await fetchPOData(poNumber);
+              try {
+                // Fetch PO data
+                await fetchPOData(poNumber);
+                
+                // Only show success message if data is valid
+                if (detailPOData.isNotEmpty) {
+                  Flushbar(
+                    message: 'PO berhasil terpanggil!',
+                    duration: Duration(seconds: 3),
+                    flushbarPosition: FlushbarPosition.TOP,
+                    backgroundColor: Colors.green,
+                  ).show(context);
+                } else {
+                  throw Exception('Nomor PO tidak ditemukan!'); // Trigger error notification
+                }
+              } catch (e) {
+                // Handle different error messages
+                Flushbar(
+                  message: e.toString(),
+                  duration: Duration(seconds: 3),
+                  flushbarPosition: FlushbarPosition.TOP,
+                  backgroundColor: Colors.red,
+                ).show(context);
+              } finally {
+                // Hide loading indicator
+                setState(() {
+                  isLoading = false;
+                });
+              }
+            } else {
+              // Show error if PO number input is empty
+              Flushbar(
+                message: 'Silakan masukkan nomor PO yang valid',
+                duration: Duration(seconds: 3),
+                flushbarPosition: FlushbarPosition.TOP,
+                backgroundColor: Colors.red,
+              ).show(context);
+            }
+          },
+          child: const Icon(Icons.search),
+        ),
 
-                      // Setelah berhasil memanggil data PO, tampilkan notifikasi
-                      Flushbar(
-                        message: 'PO berhasil terpanggil!',
-                        duration: Duration(seconds: 3),
-                        flushbarPosition: FlushbarPosition.TOP,
-                        backgroundColor: Colors.green,
-                      ).show(context);
-                    } catch (e) {
-                      // Tampilkan pesan error jika ada masalah
-                      Flushbar(
-                        message: 'Terjadi kesalahan: $e',
-                        duration: Duration(seconds: 3),
-                        flushbarPosition: FlushbarPosition.TOP,
-                        backgroundColor: Colors.red,
-                      ).show(context);
-                    } finally {
-                      // Sembunyikan loading indicator setelah data diproses
-                      setState(() {
-                        isLoading = false;
-                      });
-                    }
-                  } else {
-                    // Tampilkan notifikasi jika input nomor PO kosong
-                    Flushbar(
-                      message: 'Silakan masukkan nomor PO yang valid',
-                      duration: Duration(seconds: 3),
-                      flushbarPosition: FlushbarPosition.TOP,
-                      backgroundColor: Colors.red,
-                    ).show(context);
-                  }
-                },
-                child: const Icon(Icons.search),
-              ),
+
             ],
           ),
           const SizedBox(height: 20),
@@ -591,56 +676,6 @@ Future<Map<String, dynamic>?> fetchMasterItem(String scannedCode) async {
          
             ),
          
-          
-              // const SizedBox(height: 20),
-              // isLoading
-              //     ? const Center(child: CircularProgressIndicator())
-              //     : Expanded(
-              //         child: Column(
-              //           children: [
-              //             if (detailPOData.isEmpty)
-              //               const Center(
-              //                   child: Text('Search for a PO to see details'))
-              //             else
-              //               Expanded(
-              //                 child: SingleChildScrollView(
-              //                   scrollDirection: Axis.vertical,
-              //                   child: SingleChildScrollView(
-              //                     scrollDirection: Axis.horizontal,
-              //                     child: DataTable(
-              //                       columns: const [
-              //                         DataColumn(label: Text('Item SKU')),
-              //                         DataColumn(label: Text('Item Name')),
-              //                         DataColumn(label: Text('Barcode')),
-              //                         DataColumn(label: Text('VendorBarcode')),
-              //                         DataColumn(label: Text('Qty PO')),
-              //                       ],
-              //                       rows: detailPOData
-              //                           .map(
-              //                             (e) => DataRow(
-              //                               cells: [
-              //                               DataCell(Text(
-              //                                     e['ITEMSKU']?.toString() ??
-              //                                         '')),
-              //                               DataCell(Text(e['ITEMSKUNAME']
-              //                                         ?.toString() ??
-              //                                     '')),
-              //                               DataCell(Text(
-              //                                     e['BARCODENO']?.toString() ??
-              //                                         '')),
-              //                               DataCell(Text(
-              //                                     e['VENDORBARCODE']?.toString() ??
-              //                                         '')),
-                                                                
-              //                               DataCell(Text((e['QTYPO'] as String).replaceAll(formatQTYRegex, ''))),
-              //                               ],
-              //                             ),
-              //                           )
-              //                           .toList(),
-              //                     ),
-              //                   ),
-              //                 ),
-              //               ),
                           const SizedBox(height: 20),
                           Expanded(
                             child: Column(
@@ -669,63 +704,145 @@ Future<Map<String, dynamic>?> fetchMasterItem(String scannedCode) async {
                 DataColumn(label: Text('Device')),
                 DataColumn(label: Text('QTY Koli')),
                 DataColumn(label: Text('Timestamp')),
+                
+
              
               ],
               rows: [
-                ...scannedResults.map(
-                  (result) => DataRow(
-                    cells: [
-                     
-                      DataCell(Text(result['pono'] ?? '')),
-                      DataCell(Text(result['item_sku'] ?? '')),
-                      DataCell(Text(result['item_name'] ?? '')),
-                      DataCell(Text(result['barcode'] ?? '')),
-                      DataCell(Text(result['vendorbarcode'] ?? '')),
-                      DataCell(Text(result['qty_scanned'].toString())),
-                      DataCell(Text(result['user'] ?? '')),
-                      DataCell(Text(result['device_name'] ?? '')),
-                      DataCell(Text(result['qty_koli'].toString())),
-                      DataCell(Text(result['scandate'] ?? '')),
-                     
-                    ],
-                  ),
-                ),
-                ...differentScannedResults.map(
-                  (result) => DataRow(
-                    cells: [
-                     
-                      DataCell(Text(result['pono'] ?? '')),
-                      DataCell(Text(result['item_sku'] ?? '')),
-                      DataCell(Text(result['item_name'] ?? '')),
-                      DataCell(Text(result['barcode'] ?? '')),
-                      DataCell(Text(result['vendorbarcode'] ?? '')),
-                      DataCell(Text(result['qty_scanned'].toString())),
-                      DataCell(Text(result['user'] ?? '')),
-                      DataCell(Text(result['device_name'] ?? '')),
-                      DataCell(Text(result['qty_koli'].toString())),
-                      DataCell(Text(result['scandate'] ?? '')),
-                     
-                    ],
-                  ),
-                ),
-                ...noitemScannedResults.map(
-                  (result) => DataRow(
-                    cells: [
-                      DataCell(Text(result['pono'] ?? '')),
-                      DataCell(Text(result['item_sku'] ?? '')),
-                      DataCell(Text(result['item_name'] ?? '')),
-                      DataCell(Text(result['barcode'] ?? '')),
-                      DataCell(Text(result['vendorbarcode'] ?? '')),
-                      DataCell(Text(result['qty_scanned'].toString())),
-                      DataCell(Text(result['user'] ?? '')),
-                      DataCell(Text(result['device_name'] ?? '')),
-                      DataCell(Text(result['qty_koli'].toString())),
-                      DataCell(Text(result['scandate'] ?? '')),
-                     
-                    ],
-                  ),
-                ),
-              ],
+  ...scannedResults.map(
+    (result) {
+      // Create a mutable copy of the result
+      Map<String, dynamic> mutableResult = Map.from(result);
+
+      return DataRow(
+        cells: [
+          DataCell(Text(mutableResult['pono'] ?? '')),
+          DataCell(Text(mutableResult['item_sku'] ?? '')),
+          DataCell(Text(mutableResult['item_name'] ?? '')),
+          DataCell(Text(mutableResult['barcode'] ?? '')),
+          DataCell(Text(mutableResult['vendorbarcode'] ?? '')),
+          DataCell(
+            TextFormField(
+              initialValue: mutableResult['qty_scanned'].toString(),
+              keyboardType: TextInputType.number,
+              onFieldSubmitted: (newValue) {
+                // Update the scanned quantity directly
+                int? updatedQty = int.tryParse(newValue);
+                if (updatedQty != null) {
+                  setState(() {
+                    mutableResult['qty_scanned'] = updatedQty;
+                    int index = scannedResults.indexWhere((r) => r['barcode'] == result['barcode']);
+                    if (index != -1) {
+                      scannedResults[index] = mutableResult;
+                    }
+
+                    // Optional: Update backend with new quantity
+                    submitScannedResults();
+                    submitScannedMasterItemsResults();
+                    submitScannedNoItemsResults();
+                  });
+                }
+              },
+            ),
+          ),
+          DataCell(Text(mutableResult['user'] ?? '')),
+          DataCell(Text(mutableResult['device_name'] ?? '')),
+          DataCell(Text(mutableResult['qty_koli'].toString())),
+          DataCell(Text(mutableResult['scandate'] ?? '')),
+        ],
+      );
+    },
+  ),
+  ...differentScannedResults.map(
+    (result) {
+      // Create a mutable copy of the result
+      Map<String, dynamic> mutableResult = Map.from(result);
+
+      return DataRow(
+        cells: [
+          DataCell(Text(mutableResult['pono'] ?? '')),
+          DataCell(Text(mutableResult['item_sku'] ?? '')),
+          DataCell(Text(mutableResult['item_name'] ?? '')),
+          DataCell(Text(mutableResult['barcode'] ?? '')),
+          DataCell(Text(mutableResult['vendorbarcode'] ?? '')),
+          DataCell(
+            TextFormField(
+              initialValue: mutableResult['qty_scanned'].toString(),
+              keyboardType: TextInputType.number,
+              onFieldSubmitted: (newValue) {
+                // Update the scanned quantity directly
+                int? updatedQty = int.tryParse(newValue);
+                if (updatedQty != null) {
+                  setState(() {
+                    mutableResult['qty_scanned'] = updatedQty;
+                    int index = differentScannedResults.indexWhere((r) => r['barcode'] == result['barcode']);
+                    if (index != -1) {
+                      differentScannedResults[index] = mutableResult;
+                    }
+
+                    // Optional: Update backend with new quantity
+                    submitScannedResults();
+                    submitScannedMasterItemsResults();
+                    submitScannedNoItemsResults();
+                  });
+                }
+              },
+            ),
+          ),
+          DataCell(Text(mutableResult['user'] ?? '')),
+          DataCell(Text(mutableResult['device_name'] ?? '')),
+          DataCell(Text(mutableResult['qty_koli'].toString())),
+          DataCell(Text(mutableResult['scandate'] ?? '')),
+        ],
+      );
+    },
+  ),
+  ...noitemScannedResults.map(
+    (result) {
+      // Create a mutable copy of the result
+      Map<String, dynamic> mutableResult = Map.from(result);
+
+      return DataRow(
+        cells: [
+          DataCell(Text(mutableResult['pono'] ?? '')),
+          DataCell(Text(mutableResult['item_sku'] ?? '')),
+          DataCell(Text(mutableResult['item_name'] ?? '')),
+          DataCell(Text(mutableResult['barcode'] ?? '')),
+          DataCell(Text(mutableResult['vendorbarcode'] ?? '')),
+          DataCell(
+            TextFormField(
+              initialValue: mutableResult['qty_scanned'].toString(),
+              keyboardType: TextInputType.number,
+              onFieldSubmitted: (newValue) {
+                // Update the scanned quantity directly
+                int? updatedQty = int.tryParse(newValue);
+                if (updatedQty != null) {
+                  setState(() {
+                    mutableResult['qty_scanned'] = updatedQty;
+                    int index = noitemScannedResults.indexWhere((r) => r['barcode'] == result['barcode']);
+                    if (index != -1) {
+                      noitemScannedResults[index] = mutableResult;
+                    }
+
+                    // Optional: Update backend with new quantity
+                    submitScannedResults();
+                    submitScannedMasterItemsResults();
+                    submitScannedNoItemsResults();
+                  });
+                }
+              },
+            ),
+          ),
+          DataCell(Text(mutableResult['user'] ?? '')),
+          DataCell(Text(mutableResult['device_name'] ?? '')),
+          DataCell(Text(mutableResult['qty_koli'].toString())),
+          DataCell(Text(mutableResult['scandate'] ?? '')),
+        ],
+      );
+    },
+  ),
+]
+
             ),
           ),
         ),
@@ -749,10 +866,6 @@ Future<Map<String, dynamic>?> fetchMasterItem(String scannedCode) async {
             );
             return;
           }
-          // checkAndSumQty("S54227417345001");
-          
-
-
           Navigator.push(
             context,
             MaterialPageRoute(
@@ -774,13 +887,6 @@ Future<Map<String, dynamic>?> fetchMasterItem(String scannedCode) async {
           )
             
         );
-    
-    
-    
-    //         ]
-    // )
-    //     )
-    // );
   }
 }
 

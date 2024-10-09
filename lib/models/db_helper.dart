@@ -772,6 +772,7 @@ Future<void> clearMasterItems() async {
       await db.insert('po', poData);
       print('PO inserted: ${poData['pono']} - Barcode: ${poData['barcode']} - VendorBarcode: ${poData['vendorbarcode']}');
     }
+    
   }
 
 
