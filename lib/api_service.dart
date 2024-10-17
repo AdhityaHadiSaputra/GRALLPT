@@ -53,18 +53,16 @@ class ApiService {
       if (response.statusCode == 200) {
         Map<String, dynamic> result = jsonDecode(response.body);
         
-        // Debug: Print the full API response
         print('API Response: $result');
         
-        // Extract USERID from the nested structure
         String? userId;
         if (result['msg'] is List && result['msg'].isNotEmpty) {
-          userId = result['msg'][0]['USERID']; // Access the first element in msg
+          userId = result['msg'][0]['USERID']; 
         }
 
         if (userId != null && userId.isNotEmpty) {
           SharedPreferences prefs = await SharedPreferences.getInstance();
-          await prefs.setString('userId', userId); // Save userId to SharedPreferences
+          await prefs.setString('userId', userId); 
           print('User ID saved: $userId');
         } else {
           print('Error: userId is null or empty in the API response');
@@ -80,8 +78,6 @@ class ApiService {
     }
   }
 }
-
-
 
 
 class Apiuser {
@@ -111,7 +107,7 @@ class ApiMaster {
  Future<void> fetchAndSaveMasterItems(String brand, Function(bool) setLoading) async {
   setLoading(true);
   try {
-    print('Fetching master items for brand: $brand'); // Print when fetching starts
+    print('Fetching master items for brand: $brand');
 
     final response = await http.post(
       Uri.parse(APIUrl.MASTER_URL),
@@ -123,13 +119,12 @@ class ApiMaster {
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body) as Map<String, dynamic>;
-      print('Response received: $data'); // Print the raw response data
+      print('Response received: $data'); 
 
       if (data['code'] == "1" && data['msg'] != null) {
         final List<dynamic> items = data['msg'];
-        print('Number of items received: ${items.length}'); // Print number of items fetched
+        print('Number of items received: ${items.length}'); 
 
-        // Prepare the list of master items for bulk insert
         List<Map<String, dynamic>> masterItemsToInsert = [];
 
         for (var item in items) {
@@ -141,25 +136,25 @@ class ApiMaster {
           });
         }
 
-        print('Inserting ${masterItemsToInsert.length} items to local database'); // Print before bulk insert
+        print('Inserting ${masterItemsToInsert.length} items to local database'); 
 
-        // Perform bulk insert/update to the local database
+
         await DatabaseHelper().bulkInsertOrUpdateMasterItems(masterItemsToInsert);
 
-        print('Data saved successfully to local database'); // Print after successful insertion
+        print('Data saved successfully to local database'); 
       } else {
-        print('Invalid data structure or no items found'); // Print if data is invalid
+        print('Invalid data structure or no items found'); 
         throw Exception('Failed to load Master Data or invalid data structure');
       }
     } else {
-      print('Failed to load Master Data, status code: ${response.statusCode}'); // Print on failure
+      print('Failed to load Master Data, status code: ${response.statusCode}'); 
       throw Exception('Failed to load Master Data');
     }
   } catch (e) {
-    print('Error fetching and saving master items: $e'); // Print any errors
-    throw e; // Propagate the error
+    print('Error fetching and saving master items: $e'); 
+    throw e; 
   } finally {
-    setLoading(false); // End loading state
+    setLoading(false); 
   }
 }
 

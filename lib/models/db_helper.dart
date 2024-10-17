@@ -24,28 +24,28 @@ class DatabaseHelper {
 
   Future<Database> _initDatabase() async {
     String path = join(await getDatabasesPath(), 'po_database.db');
-    print('Database path: $path'); // Debugging line
+    print('Database path: $path');  
     return await openDatabase(
       path,
       version: 2,
       onCreate: (db, version) async {
-        print('Creating database...'); // Debugging line
+        print('Creating database...');  
         await _onCreate(db, version);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         print(
-            'Upgrading database from version $oldVersion to $newVersion'); // Debugging line
+            'Upgrading database from version $oldVersion to $newVersion');  
         await _onUpgrade(db, oldVersion, newVersion);
       },
       onOpen: (db) async {
-        print('Opening database...'); // Debugging line
+        print('Opening database...');  
       },
     );
   }
 
   Future<void> _onCreate(Database db, int version) async {
     try {
-      print('Executing CREATE TABLE statement...'); // Debugging line
+      print('Executing CREATE TABLE statement...');  
       await db.execute(
         '''
         CREATE TABLE po(
@@ -226,7 +226,7 @@ class DatabaseHelper {
       return await db.insert('scanned_results', scannedData);
     } catch (e) {
       print('Error inserting scanned result: $e');
-      return -1; // Indicate an error occurred
+      return -1;  
     }
   }
 
@@ -246,7 +246,7 @@ class DatabaseHelper {
       return await db.insert('scanned_master', scannedData);
     } catch (e) {
       print('Error inserting scanned result: $e');
-      return -1; // Indicate an error occurred
+      return -1;  
     }
   }
 
@@ -266,7 +266,7 @@ class DatabaseHelper {
       return await db.insert('noitems', scannedData);
     } catch (e) {
       print('Error inserting scanned result: $e');
-      return -1; // Indicate an error occurred
+      return -1;  
     }
   }
 
@@ -286,7 +286,7 @@ class DatabaseHelper {
       return await db.insert('defect', scannedData);
     } catch (e) {
       print('Error inserting scanned result: $e');
-      return -1; // Indicate an error occurred
+      return -1;  
     }
   }
   Future<int> insertScannedDefectMasterResult(Map<String, dynamic> scannedData) async {
@@ -295,7 +295,7 @@ class DatabaseHelper {
       return await db.insert('defect_master', scannedData);
     } catch (e) {
       print('Error inserting scanned result: $e');
-      return -1; // Indicate an error occurred
+      return -1;  
     }
   }
   Future<int> insertScannedDefectNoResult(Map<String, dynamic> scannedData) async {
@@ -304,7 +304,7 @@ class DatabaseHelper {
       return await db.insert('defect_no', scannedData);
     } catch (e) {
       print('Error inserting scanned result: $e');
-      return -1; // Indicate an error occurred
+      return -1;  
     }
   }
 
@@ -395,21 +395,21 @@ class DatabaseHelper {
   }
   Future<void> clearDefectTable() async {
     final db = await database;
-    await db.delete('defect'); // Assuming 'defect_table' is the table name
+    await db.delete('defect');  
   }
   Future<void> clearDefectMasterTable() async {
     final db = await database;
-    await db.delete('defect_master'); // Assuming 'defect_table' is the table name
+    await db.delete('defect_master');  
   }
   Future<void> clearDefectNoTable() async {
     final db = await database;
-    await db.delete('defect_no'); // Assuming 'defect_table' is the table name
+    await db.delete('defect_no');  
   }
   Future<void> clearScanedTable() async {
     final db = await database;
     await db.delete('noitems'); 
-    await db.delete('scanned_master'); // Assuming 'defect_table' is the table name
-    // Assuming 'defect_table' is the table name
+    await db.delete('scanned_master');  
+     
   }
 
 
@@ -487,7 +487,7 @@ class DatabaseHelper {
 
 
   Future<void> insertOrUpdateScannedResults(Map<String, dynamic> poData) async {
-    final db = await database; // Assuming you have a method to get the database instance
+    final db = await database;  
 
     try {
       // First try updating the defect data
@@ -540,7 +540,7 @@ class DatabaseHelper {
   }
  
  Future<void> insertOrUpdateScannedMasterItemsResults(Map<String, dynamic> masterData) async {
-    final db = await database; // Assuming you have a method to get the database instance
+    final db = await database;  
 
     try {
       // First try updating the defect data
@@ -565,18 +565,15 @@ class DatabaseHelper {
   }
 
   Future<void> insertOrUpdateScannedNoItemsResults(Map<String, dynamic> noItemsData) async {
-    final db = await database; // Assuming you have a method to get the database instance
+    final db = await database;  
 
     try {
-      // First try updating the defect data
       int updateCount = await db.update(
         'noitems',
         noItemsData,
         where: 'pono = ? AND barcode = ? AND vendorbarcode = ? AND type = ? AND scandate = ?',
         whereArgs: [noItemsData['pono'], noItemsData['barcode'], noItemsData['vendorbarcode'], noItemsData['type'], noItemsData['scandate']],
       );
-
-      // If no rows were updated, insert the new defect data
       if (updateCount == 0) {
         await db.insert(
           'noitems',
@@ -589,10 +586,10 @@ class DatabaseHelper {
     }
   }
   Future<void> insertOrUpdateScannedDefectResults(Map<String, dynamic> defectData) async {
-    final db = await database; // Assuming you have a method to get the database instance
+    final db = await database; 
 
     try {
-      // First try updating the defect data
+     
       int updateCount = await db.update(
         'defect',
         defectData,
@@ -600,7 +597,6 @@ class DatabaseHelper {
         whereArgs: [defectData['pono'], defectData['barcode'], defectData['vendorbarcode'], defectData['type'], defectData['scandate']],
       );
 
-      // If no rows were updated, insert the new defect data
       if (updateCount == 0) {
         await db.insert(
           'defect',
@@ -613,10 +609,9 @@ class DatabaseHelper {
     }
   }
   Future<void> insertOrUpdateScannedDefectMasterResults(Map<String, dynamic> defectMasterData) async {
-    final db = await database; // Assuming you have a method to get the database instance
+    final db = await database; 
 
     try {
-      // First try updating the defect data
       int updateCount = await db.update(
         'defect_master',
         defectMasterData,
@@ -624,7 +619,6 @@ class DatabaseHelper {
         whereArgs: [defectMasterData['pono'], defectMasterData['barcode'], defectMasterData['vendorbarcode'], defectMasterData['type'], defectMasterData['scandate']],
       );
 
-      // If no rows were updated, insert the new defect data
       if (updateCount == 0) {
         await db.insert(
           'defect_master',
@@ -637,10 +631,9 @@ class DatabaseHelper {
     }
   }
   Future<void> insertOrUpdateScannedDefectNoResults(Map<String, dynamic> defectNoData) async {
-    final db = await database; // Assuming you have a method to get the database instance
+    final db = await database; 
 
     try {
-      // First try updating the defect data
       int updateCount = await db.update(
         'defect_no',
         defectNoData,
@@ -648,7 +641,6 @@ class DatabaseHelper {
         whereArgs: [defectNoData['pono'], defectNoData['barcode'], defectNoData['vendorbarcode'], defectNoData['type'], defectNoData['scandate']],
       );
 
-      // If no rows were updated, insert the new defect data
       if (updateCount == 0) {
         await db.insert(
           'defect_no',
@@ -665,7 +657,6 @@ class DatabaseHelper {
   Future<void> bulkInsertOrUpdateMasterItems(List<Map<String, dynamic>> masterItems) async {
   final db = await DatabaseHelper().database;
 
-  // Perform bulk insert/update within a transaction for efficiency
   await db.transaction((txn) async {
     for (var masterItem in masterItems) {
       final result = await txn.query(
@@ -675,7 +666,6 @@ class DatabaseHelper {
       );
 
       if (result.isNotEmpty) {
-        // Update existing item
         await txn.update(
           'master_item',
           masterItem,
@@ -683,7 +673,6 @@ class DatabaseHelper {
           whereArgs: [masterItem['item_sku']],
         );
       } else {
-        // Insert new item
         await txn.insert('master_item', masterItem);
       }
     }
@@ -693,8 +682,8 @@ class DatabaseHelper {
 
 
 Future<void> clearMasterItems() async {
-  final db = await database; // Get the database instance
-  await db.delete('master_item'); // Replace 'master_items' with your table name
+  final db = await database; 
+  await db.delete('master_item'); 
 }
 
   Future<void> clearScannedResults() async {
@@ -730,7 +719,6 @@ Future<void> clearMasterItems() async {
       final db = await database;
       List<Map<String, dynamic>> results = await db.query('scanned_results');
 
-      // Print each row for debugging
       if (results.isEmpty) {
         print('No scanned results found.');
       } else {
@@ -917,33 +905,33 @@ Future<void> clearMasterItems() async {
  Future<List<Map<String, dynamic>>> getSummaryRecentPOs(String userId) async {
   final db = await database;
   final query = 'SELECT item_sku, item_name, barcode, vendorbarcode, SUM(qty_scanned) as totalscan FROM scanned_results WHERE user = ? GROUP BY item_sku, item_name, barcode';
-  return await db.rawQuery(query, [userId]); // Correctly passing userId in the query
+  return await db.rawQuery(query, [userId]); 
 }
  Future<List<Map<String, dynamic>>> getSummaryMasterRecentPOs(String userId) async {
   final db = await database;
   final query = 'SELECT item_sku, item_name, barcode, vendorbarcode, SUM(qty_scanned) as totalscan FROM scanned_master WHERE user = ? GROUP BY item_sku, item_name, barcode';
-  return await db.rawQuery(query, [userId]); // Correctly passing userId in the query
+  return await db.rawQuery(query, [userId]); 
 }
    Future<List<Map<String, dynamic>>> getSummaryRecentNoPO(String userId) async {
     final db = await database;
     final query = 
         'SELECT item_sku, item_name, barcode, vendorbarcode, SUM(qty_scanned) as totalscan FROM noitems WHERE user = ? GROUP BY item_sku, item_name, barcode';
-    return await db.rawQuery(query, [userId]); // pass userId dynamically if needed
+    return await db.rawQuery(query, [userId]); 
   }
   Future<List<Map<String, dynamic>>> getSummaryDefecttPOs(String userId) async {
     final db = await database;
     final query = 'SELECT item_sku, item_name, barcode, vendorbarcode, SUM(qty_scanned) as totalscan FROM defect WHERE user = ? GROUP BY item_sku, item_name, barcode';
-    return await db.rawQuery(query, [userId]); // Correctly passing userId in the query
+    return await db.rawQuery(query, [userId]); 
   }
 Future<List<Map<String, dynamic>>> getSummaryDefectMasterPOs(String userId) async {
     final db = await database;
     final query = 'SELECT item_sku, item_name, barcode, vendorbarcode, SUM(qty_scanned) as totalscan FROM defect_master WHERE user = ? GROUP BY item_sku, item_name, barcode';
-    return await db.rawQuery(query, [userId]); // Correctly passing userId in the query
+    return await db.rawQuery(query, [userId]); 
   }
   Future<List<Map<String, dynamic>>> getSummaryDefectNoPOs(String userId) async {
     final db = await database;
     final query = 'SELECT item_sku, item_name, barcode, vendorbarcode, SUM(qty_scanned) as totalscan FROM defect_no WHERE user = ? GROUP BY item_sku, item_name, barcode';
-    return await db.rawQuery(query, [userId]); // Correctly passing userId in the query
+    return await db.rawQuery(query, [userId]); 
   }
 
   Future<void> clearPOs() async {
@@ -1028,7 +1016,7 @@ Future<List<Map<String, dynamic>>> getSummaryDefectMasterPOs(String userId) asyn
     await db.delete('defect',
       where: 'pono = ? AND scandate = ?',
       whereArgs: [poNumber],
-    ); // Delete all rows from the defects table
+    ); 
   }
   
 

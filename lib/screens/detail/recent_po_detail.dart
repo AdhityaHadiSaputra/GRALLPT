@@ -52,7 +52,7 @@ class _PODetailPageState extends State<PODetailPage> {
   fetchSummaryRecentMasterPOs();
   fetchSummaryRecentNoPO();
     // fetchScannedOverResults();
-    fetchData(); // Fetch user data and set userId
+    fetchData(); 
   }
 
   void playBeep() async {
@@ -75,28 +75,27 @@ class _PODetailPageState extends State<PODetailPage> {
       poDetails = combinedDetails;
     });
   } catch (e) {
-    // Handle the error (e.g., show a message)
+    
     print('Error fetching PO details: $e');
-    // Optionally, show a Snackbar or some UI to inform the user
+    
   } finally {
     setState(() {
-      isLoading = false; // Stop loading state regardless of success or failure
+      isLoading = false; 
     });
   }
 }
 
 Future<void> fetchSummaryRecentPOs() async {
   try {
-    // Retrieve the userId from SharedPreferences
+ 
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? userId = prefs.getString('userId'); // Fetch saved userId
+    String? userId = prefs.getString('userId'); 
 
     if (userId == null || userId.isEmpty) {
       print('Error: userId is empty');
-      return; // Exit if no userId is found
+      return; 
     }
 
-    // Use the userId to fetch summary data
     final summary = await dbHelper.getSummaryRecentPOs(userId);
 
     setState(() {
@@ -111,16 +110,14 @@ Future<void> fetchSummaryRecentPOs() async {
 
 Future<void> fetchSummaryRecentMasterPOs() async {
  try {
-    // Retrieve the userId from SharedPreferences
+
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? userId = prefs.getString('userId'); // Fetch saved userId
+    String? userId = prefs.getString('userId'); 
 
     if (userId == null || userId.isEmpty) {
       print('Error: userId is empty');
-      return; // Exit if no userId is found
+      return; 
     }
-
-    // Use the userId to fetch summary data
     final summary = await dbHelper.getSummaryMasterRecentPOs(userId);
 
     setState(() {
@@ -134,16 +131,16 @@ Future<void> fetchSummaryRecentMasterPOs() async {
 }
 Future<void> fetchSummaryRecentNoPO() async {
  try {
-    // Retrieve the userId from SharedPreferences
+
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? userId = prefs.getString('userId'); // Fetch saved userId
+    String? userId = prefs.getString('userId'); 
 
     if (userId == null || userId.isEmpty) {
       print('Error: userId is empty');
-      return; // Exit if no userId is found
+      return;  
     }
 
-    // Use the userId to fetch summary data
+  
     final summary = await dbHelper.getSummaryRecentNoPO(userId);
 
     setState(() {
@@ -227,7 +224,7 @@ Future<void> fetchSummaryRecentNoPO() async {
     );
   }
   void _handleOverScannedItem(Map<String, dynamic> item, String scannedCode) {
-  // Insert the over-scanned item into the over-scanned list
+ 
   setState(() {
     noitemScannedResults.add({
       'pono': widget.poNumber,
@@ -252,17 +249,17 @@ Future<void> fetchSummaryRecentNoPO() async {
   void checkAndSumQty(String scannedCode) {
     for (var item in poDetails) {
     if (item['barcode'] == scannedCode) {
-      // Get PO quantity and scanned quantity
+   
       int poQty = int.tryParse(item['qty_po'].toString()) ?? 0;
       int scannedQty = int.tryParse(item['qty_scanned']?.toString() ?? '0') ?? 0;
 
-      // If scanned quantity exceeds PO quantity, mark it as over
+    
       if (scannedQty > poQty) {
         _handleOverScannedItem(item, scannedCode);
         return;
       }
 
-      // Increment the scanned quantity
+     
       _showQtyInputDialog(item, scannedCode);
       return;
     }
@@ -326,10 +323,10 @@ Future<void> _updateScannedItem(Map<String, dynamic> item, int inputQty) async {
   updatedItem['qty_scanned'] = (newQtyScanned > qtyPO) ? qtyPO : newQtyScanned;
   updatedItem['qty_different'] = qtyDifferent;
 
-  // Insert or update the scanned result in the database
+ 
   Map<String, dynamic> scannedData = {
     "pono": widget.poNumber,
-    "item_sku": updatedItem['item_sku'], // Ensure the correct field names
+    "item_sku": updatedItem['item_sku'],  
     "item_name": updatedItem['item_name'],
     "barcode": updatedItem['barcode'],
     "vendorbarcode": updatedItem['vendorbarcode'] ?? '',
@@ -340,7 +337,7 @@ Future<void> _updateScannedItem(Map<String, dynamic> item, int inputQty) async {
 
   await dbHelper.insertOrUpdateScannedResults(scannedData);
 
-  // Refresh data in the UI
+ 
   fetchPODetails();
   fetchScannedResults();
   fetchNoItemsResults();
@@ -459,7 +456,7 @@ if (noitemScannedResults.isNotEmpty) {
       return sum + (detail['totalscan'] as int? ?? 0);
     });
 
-    return totalMaster + totalNoPO; // Combine both totals
+    return totalMaster + totalNoPO;  
   }
 
   return Column(
@@ -468,7 +465,7 @@ if (noitemScannedResults.isNotEmpty) {
        Padding(
       padding: const EdgeInsets.all(8.0),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween, // Untuk meletakkan teks "Grand Total" di kiri dan angkanya di kanan
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,  
         children: [
           const Text(
             'Grand Total PO',
@@ -495,7 +492,7 @@ if (noitemScannedResults.isNotEmpty) {
   Padding(
       padding: const EdgeInsets.all(8.0),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween, // Untuk meletakkan teks "Grand Total" di kiri dan angkanya di kanan
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,  
         children: [
           
           const Text(
@@ -748,7 +745,7 @@ Widget buildRecentNoPOSummary() {
                   //
                   //     ),
                       
-                      SizedBox(height: 20), // Add some spacing
+                      SizedBox(height: 20),  
                     Center(
                       child: ElevatedButton(
                         onPressed: submitScannedResults,
@@ -762,21 +759,7 @@ Widget buildRecentNoPOSummary() {
               )
 
 
-    );
-                // )]))])));
-    //                 ]
-    //               ))]))
-    // );
-                    // ],),),],),));
-              
-    //               ]))
-    //                 ]
-    //               )
-    //           )
-    // );
-  
-              
-    
+    ); 
   }
 }
 
@@ -796,10 +779,10 @@ class QRScannerPage extends StatelessWidget {
         key: qrKey,
         onQRViewCreated: (QRViewController controller) {
           controller.scannedDataStream.listen((scanData) {
-            print('Scanned Data: ${scanData.code}'); // Debugging scan data
+            print('Scanned Data: ${scanData.code}'); 
             if (scanData.code != null) {
-              playBeep(); // Play beep sound when a QR code is scanned
-              onQRScanned(scanData.code!); // Ensure code is not null
+              playBeep(); 
+              onQRScanned(scanData.code!); 
             }
           });
         },

@@ -31,7 +31,6 @@ class _MasterItemPageState extends State<MasterItemPage> {
         items = dbItems;
       });
 
-      // Show a notification with the number of master items
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('${dbItems.length} master items saved locally')),
       );
@@ -70,17 +69,16 @@ class _MasterItemPageState extends State<MasterItemPage> {
     });
 
     try {
-      // Clear previous items
+
       await clearMasterItems();
 
-      // Fetch and save new items for the searched brand
+
       await apiMaster.fetchAndSaveMasterItems(brand, (loading) {
         setState(() {
           isLoading = loading;
         });
       });
 
-      // Load the new items from the database
       await loadLocalMasterItems();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(

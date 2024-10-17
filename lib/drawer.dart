@@ -41,33 +41,27 @@ class _MyDrawerState extends State<MyDrawer> {
       );
       print(response);
 
-      // Check if the response is not null and contains a 'code' field
       if (response.containsKey('code')) {
         final resultCode = response['code'];
 
         setState(() {
-          // Check the 'code' to determine if the request was successful
           if (resultCode == "1") {
-            // Extract USERID from the response and set it in the state
             final List<dynamic> msgList = response['msg'];
             if (msgList.isNotEmpty && msgList[0] is Map<String, dynamic>) {
               final Map<String, dynamic> msgMap =
                   msgList[0] as Map<String, dynamic>;
               userId = msgMap[
-                  'USERID']; // Assuming USERID is in the first map of the list
+                  'USERID'];
             }
           } else {
-            // Handle the case where the request was not successful
             print('Request failed with code $resultCode');
             print(response["msg"]);
           }
         });
       } else {
-        // Handle the case where the response structure is unexpected
         print('Unexpected response structure');
       }
     } catch (error) {
-      // Handle error, e.g., display an error message to the user
       print('Error: $error');
     }
   }
@@ -149,17 +143,6 @@ class _MyDrawerState extends State<MyDrawer> {
                 ),
               ), 
             
-              // ListTile(
-              //   leading: Icon(Icons.payments_outlined),
-              //   title: const Text("Purchase Order"),
-              //   onTap: () {
-              //      Navigator.pop(context); // Close the drawer
-              //     Navigator.push(
-              //       context,
-              //       MaterialPageRoute(builder: (context) => AppointmentPage()),
-              //     );
-              //   },
-              // ),
               ListTile(
                 leading: Icon(Icons.document_scanner),
                 title: const Text("Scan PO"),
@@ -219,8 +202,6 @@ class _MyDrawerState extends State<MyDrawer> {
                 },
               ),
 
-
-
               const Divider(),
               
               ListTile(
@@ -230,23 +211,6 @@ class _MyDrawerState extends State<MyDrawer> {
                   _showLogoutConfirmationDialog(context);
                 },
               ),
-              // SwitchListTile(
-              //   title: Text(
-              //     isDarkMode ? 'Dark Mode' : 'Light Mode',
-              //     style: TextStyle(
-              //       color: isDarkMode ? Colors.white : Colors.black,
-              //     ),
-              //   ),
-              //   value: isDarkMode,
-              //   onChanged: (value) {
-              //     final provider =
-              //         Provider.of<ThemeProvider>(context, listen: false);
-              //     provider
-              //         .setTheme(value ? ThemeData.dark() : ThemeData.light());
-              //   },
-              //   activeColor: Colors.black,
-              //   inactiveTrackColor: Colors.grey,
-              // ),
             ],
           ),
         ),

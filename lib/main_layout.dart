@@ -1,4 +1,3 @@
-// import 'package:Refresh/drawer.dart';
 import 'drawer.dart';
 import 'package:flutter/material.dart';
 
@@ -31,12 +30,10 @@ class _MainLayoutState extends State<MainLayout> {
         body: Stack(
           fit: StackFit.expand,
           children: [
-            // Background Image
             Image.asset(
               'assets/MOBILE2.png',
               fit: BoxFit.contain,
             ),
-            // PageView
             PageView(
               controller: _pageController,
               onPageChanged: ((value) {

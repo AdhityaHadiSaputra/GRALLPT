@@ -23,7 +23,6 @@ class _LoginFormState extends State<LoginForm> {
 
   var isObsecure = true.obs;
 
-  // Define a list of PT options
   final List<String> ptOptions = ["MF", "MG"];
   String? selectedPT;
 
@@ -100,7 +99,6 @@ class _LoginFormState extends State<LoginForm> {
           ),
           const SizedBox(height: 18),
 
-          // PT DropdownButtonFormField
           DropdownButtonFormField<String>(
             value: selectedPT,
             validator: (val) => val == null ? "Please select a PT" : null,

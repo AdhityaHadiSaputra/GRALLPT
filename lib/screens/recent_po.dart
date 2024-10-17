@@ -20,7 +20,7 @@ class _RecentPOPageState extends State<RecentPOPage> {
   @override
   void initState() {
     super.initState();
-    fetchRecentPO(); // Fetch recent POs when the page loads
+    fetchRecentPO(); 
   }
 
   Future<void> fetchRecentPO() async {
@@ -36,10 +36,9 @@ class _RecentPOPageState extends State<RecentPOPage> {
     recentNoPOs.remove(poNumber);
     await prefs.setStringList('recent_pos', recentNoPOs);
 
-    // Remove PO from the database
     await dbHelper.deletePO(poNumber);
 
-    setState(() {}); // Update the UI
+    setState(() {}); 
   }
 
   Future<void> removeRecentPOResult(String poNumber) async {
@@ -47,25 +46,23 @@ class _RecentPOPageState extends State<RecentPOPage> {
     recentNoPOs.remove(poNumber);
     await prefs.setStringList('recent_pos', recentNoPOs);
 
-    // Remove PO from the database
     await dbHelper.deletePOScannedDifferentResult(poNumber);
 
-    setState(() {}); // Update the UI
+    setState(() {}); 
   }
   Future<void> removeRecentNOItemPOResult(String poNumber) async {
     final prefs = await SharedPreferences.getInstance();
     recentNoPOs.remove(poNumber);
     await prefs.setStringList('recent_pos', recentNoPOs);
 
-    // Remove PO from the database
     await dbHelper.deletePONoItemsResult(poNumber);
 
-    setState(() {}); // Update the UI
+    setState(() {}); 
   }
   Future<void> clearAllScaned() async {
     await dbHelper.clearScanedTable();
     setState(() {
-      recentNoPOs.clear(); // Clear the local list
+      recentNoPOs.clear(); 
     });
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('All item PO records deleted')),
@@ -114,7 +111,6 @@ class _RecentPOPageState extends State<RecentPOPage> {
                             const SizedBox(width: 8.0),
                             TextButton(
                               onPressed: () {
-                                // Remove the PO from the list and update SharedPreferences and database
                                 removeRecentPO(poNumber);
                                 removeRecentPOResult(poNumber);
                                 removeRecentNOItemPOResult(poNumber);

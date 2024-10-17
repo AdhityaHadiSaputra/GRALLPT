@@ -520,6 +520,24 @@ Future<void> updateScannedQty(Map<String, dynamic> item) async {
     }
   }
 
+  int calculateScanned(){
+int totalQty = 0;
+  
+  for (var result in scannedResults) {
+    totalQty += (result['qty_scanned'] as num?)?.toInt() ?? 0;
+  }
+  
+  for (var result in masterScannedResults) {
+    totalQty += (result['qty_scanned'] as num?)?.toInt() ?? 0;
+  }
+  
+  for (var result in noitemScannedResults) {
+    totalQty += (result['qty_scanned'] as num?)?.toInt() ?? 0;
+  }
+  
+  return totalQty;
+  }
+
 Future<void> updatePO(Map<String, dynamic> item) async {
     detailPOData = detailPOData.replaceOrAdd(
         item, (po) => po['BARCODE'] == item["BARCODE"]);
@@ -689,8 +707,8 @@ Future<void> updatePO(Map<String, dynamic> item) async {
                   Expanded(
                     child: Column(
                       children: [
-                        const Text(
-                          'Scanned Results Defect',
+                         Text(
+                          'Scanned Results Defect : ${calculateScanned()}',
                           style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold),

@@ -229,7 +229,21 @@ class _ScanQRPageState extends State<ScanQRPage> {
   }
 
 Future<void> checkAndSumQty(String scannedCode) async {
-   final deviceInfoPlugin = DeviceInfoPlugin();
+  int totalQtyScanned = calculateTotalQtyScanned(); // Get the total scanned quantity
+
+  // Check if total scanned quantity has reached or exceeded 500
+  if (totalQtyScanned >= 500) {
+    // Display an error message and prevent further scanning
+    Flushbar(
+      message: 'You cannot scan more than 500 items!',
+      duration: Duration(seconds: 3),
+      flushbarPosition: FlushbarPosition.TOP,
+      backgroundColor: Colors.red,
+    ).show(context);
+    return; // Stop further processing if limit is reached
+  }
+
+  final deviceInfoPlugin = DeviceInfoPlugin();
   String deviceName = '';
 
   if (GetPlatform.isAndroid) {
@@ -244,10 +258,10 @@ Future<void> checkAndSumQty(String scannedCode) async {
 
   // Try finding the item in the existing PO data
   final itemInPO = detailPOData.firstWhereOrNull(
-    (item) => 
-        item['BARCODENO'] == scannedCode || 
-        item['ITEMSKU'] == scannedCode || 
-        item['VENDORBARCODE'] == scannedCode
+    (item) =>
+        item['BARCODENO'] == scannedCode ||
+        item['ITEMSKU'] == scannedCode ||
+        item['VENDORBARCODE'] == scannedCode,
   );
 
   if (itemInPO != null) {
@@ -258,11 +272,17 @@ Future<void> checkAndSumQty(String scannedCode) async {
 
     print("PO Qty: $poQty, Scanned Qty: $scannedQty, Current QtyD: $currentQtyD");
 
-    int newScannedQty =  1;
+    int newScannedQty =  1; // Increment scanned quantity by 1 for the current scan
 
     // Prevent over-scanning beyond the PO quantity
     if (newScannedQty > poQty) {
-      print("Scanned qty exceeds PO qty.");
+      // Notify user that the scanned quantity exceeds the PO quantity
+      Flushbar(
+        message: 'Scanned quantity cannot exceed PO quantity!',
+        duration: Duration(seconds: 3),
+        flushbarPosition: FlushbarPosition.TOP,
+        backgroundColor: Colors.red,
+      ).show(context);
       return; // Early return to prevent further processing
     }
 
@@ -274,10 +294,8 @@ Future<void> checkAndSumQty(String scannedCode) async {
     itemInPO['scandate'] = DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now());
     setState(() {});
 
-    
     // Map the scanned PO data
     final mappedPO = {
-      
       'pono': _poNumberController.text.trim(),
       'item_sku': itemInPO['ITEMSKU'],
       'item_name': itemInPO['ITEMSKUNAME'],
@@ -299,9 +317,8 @@ Future<void> checkAndSumQty(String scannedCode) async {
 
     // Update the item in the PO and submit results
     setState(() {});
-      await updatePO(itemInPO);
-      await submitScannedResults();
-    
+    await updatePO(itemInPO);
+    await submitScannedResults();
   } else {
     // If item not found in PO, check master items and handle accordingly
     final masterItem = await fetchMasterItem(scannedCode);
@@ -314,9 +331,9 @@ Future<void> checkAndSumQty(String scannedCode) async {
         'item_name': masterItem['item_name'],
         'barcode': masterItem['barcode'],
         'vendorbarcode': masterItem['vendorbarcode'],
-        'qty_po': 0, 
+        'qty_po': 0,
         'qty_scanned': 1,
-        'qty_different': 0, 
+        'qty_different': 0,
         'device_name': deviceName,
         'scandate': DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now()),
         'user': userId,
@@ -325,7 +342,7 @@ Future<void> checkAndSumQty(String scannedCode) async {
         'type': scannedPOType,
       };
 
-     differentScannedResults.insert(0, mappedMasterItem);
+      differentScannedResults.insert(0, mappedMasterItem);
       savePOToRecent(_poNumberController.text);
       setState(() {});
       await submitScannedMasterItemsResults();
@@ -351,16 +368,17 @@ Future<void> checkAndSumQty(String scannedCode) async {
           'type': scannedPOType,
         };
 
-       noitemScannedResults.insert(0, manualMasterItem);
+        noitemScannedResults.insert(0, manualMasterItem);
         savePOToRecent(_poNumberController.text);
         setState(() {});
         await submitScannedNoItemsResults();
       } else {
         print("Manual item name input was cancelled.");
       }
-    } 
+    }
   }
 }
+
 
 // Function to prompt for manual item name input
 Future<String?> _promptManualItemNameInput(String scannedCode) async {
@@ -520,6 +538,23 @@ Future<void> updateScannedQty(Map<String, dynamic> item) async {
   }
 }
 
+int calculateTotalQtyScanned() {
+  int totalQty = 0;
+  
+  for (var result in scannedResults) {
+    totalQty += (result['qty_scanned'] as num?)?.toInt() ?? 0;
+  }
+  
+  for (var result in differentScannedResults) {
+    totalQty += (result['qty_scanned'] as num?)?.toInt() ?? 0;
+  }
+  
+  for (var result in noitemScannedResults) {
+    totalQty += (result['qty_scanned'] as num?)?.toInt() ?? 0;
+  }
+  
+  return totalQty;
+}
 
 
   Future<void> updatePO(Map<String, dynamic> item) async {
@@ -680,8 +715,8 @@ Future<void> updateScannedQty(Map<String, dynamic> item) async {
                           Expanded(
                             child: Column(
                               children: [
-                                const Text(
-                                  'Scanned Results',
+                                 Text(
+                                  'Scanned Results :  ${calculateTotalQtyScanned()}',
                                   style: TextStyle(
                                       fontSize: 18,
                                       fontWeight: FontWeight.bold),
@@ -847,6 +882,7 @@ Future<void> updateScannedQty(Map<String, dynamic> item) async {
           ),
         ),
       ),
+   
       const SizedBox(height: 20),
       ElevatedButton(
         onPressed: () {

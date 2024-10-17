@@ -447,7 +447,7 @@ try {
   );
 }
 
-// Debugging tambahan: Periksa isi dari masing-masing list sebelum digabung
+ 
 print('scannedResults:');
 print(scannedResults);
 
@@ -472,18 +472,18 @@ print(noitemScannedResults);
         return sum + (detail['totalscan'] as int? ?? 0);
       });
 
-      return totalMaster + totalNoPO; // Combine both totals
+      return totalMaster + totalNoPO;  
     }
 
 
     return Column(
-  crossAxisAlignment: CrossAxisAlignment.start, // Mengatur alignment kiri
+  crossAxisAlignment: CrossAxisAlignment.start, 
   children: [
-    // Grand Total
+  
     Padding(
       padding: const EdgeInsets.all(8.0),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween, // Untuk meletakkan teks "Grand Total" di kiri dan angkanya di kanan
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,  
         children: [
           const Text(
             'Grand Total PO',
@@ -509,7 +509,7 @@ print(noitemScannedResults);
   Padding(
       padding: const EdgeInsets.all(8.0),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween, // Untuk meletakkan teks "Grand Total" di kiri dan angkanya di kanan
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,  
         children: [
           
           const Text(
@@ -622,7 +622,6 @@ print(noitemScannedResults);
                                       ],
                                     ),
                                   ),
-              // Add a row for the grand total
             
             ],
           ),
@@ -771,17 +770,8 @@ print(noitemScannedResults);
   //                       ),
                         
   //                     ),
-                    
-      
-        
-          
-                  
-          
 
-        
-          
-
-            SizedBox(height: 20), // Add some spacing
+            SizedBox(height: 20),  
             Center(
               child: ElevatedButton(
                 onPressed: submitScannedResults,
@@ -790,7 +780,7 @@ print(noitemScannedResults);
 
             ),
                   ])));
-                  // ]))])));
+                 
   }
 }
 
@@ -810,10 +800,10 @@ class QRScannerPage extends StatelessWidget {
         key: qrKey,
         onQRViewCreated: (QRViewController controller) {
           controller.scannedDataStream.listen((scanData) {
-            print('Scanned Data: ${scanData.code}'); // Debugging scan data
+            print('Scanned Data: ${scanData.code}');  
             if (scanData.code != null) {
-              playBeep(); // Play beep sound when a QR code is scanned
-              onQRScanned(scanData.code!); // Ensure code is not null
+              playBeep();  
+              onQRScanned(scanData.code!);  
             }
           });
         },

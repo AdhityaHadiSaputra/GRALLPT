@@ -19,7 +19,7 @@ class _RecentDefectPOPageState extends State<RecentDefectPOPage> {
   @override
   void initState() {
     super.initState();
-    fetchRecentPO(); // Fetch recent POs when the page loads
+    fetchRecentPO(); 
   }
 
   Future<void> fetchRecentPO() async {
@@ -35,19 +35,17 @@ class _RecentDefectPOPageState extends State<RecentDefectPOPage> {
     recentNoPOs.remove(poNumber);
     await prefs.setStringList('recent_pos_defect', recentNoPOs);
 
-    // Remove PO from the database
     await dbHelper.deleteDefectPOResult(poNumber);
 
-    setState(() {}); // Update the UI
+    setState(() {}); 
   }
 
-  // Method to clear all defect records
   Future<void> clearAllDefects() async {
     await dbHelper.clearDefectTable();
     await dbHelper.clearDefectMasterTable();
     await dbHelper.clearDefectNoTable();
     setState(() {
-      recentNoPOs.clear(); // Clear the local list
+      recentNoPOs.clear(); 
     });
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('All defect records deleted')),
@@ -98,7 +96,6 @@ class _RecentDefectPOPageState extends State<RecentDefectPOPage> {
                   const SizedBox(width: 8.0),
                   TextButton(
                     onPressed: () {
-                      // Remove the PO from the list and update SharedPreferences and database
                       clearAllDefects();
                     },
                     child: const Column(
