@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:grmobileallpt/api_service.dart';
 import 'package:grmobileallpt/models/db_helper.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class MasterItemPage extends StatefulWidget {
   @override
@@ -13,11 +14,13 @@ class _MasterItemPageState extends State<MasterItemPage> {
   List<Map<String, dynamic>> items = [];
   bool isLoading = false;
   TextEditingController searchController = TextEditingController();
+  String lastSearchedBrand = ''; // To store the last searched brand
 
   @override
   void initState() {
     super.initState();
     loadLocalMasterItems(); // Load items from the local database on init
+    loadLastSearchedBrand(); // Load last searched brand from shared preferences
   }
 
   Future<void> loadLocalMasterItems() async {
@@ -69,9 +72,7 @@ class _MasterItemPageState extends State<MasterItemPage> {
     });
 
     try {
-
       await clearMasterItems();
-
 
       await apiMaster.fetchAndSaveMasterItems(brand, (loading) {
         setState(() {
@@ -79,6 +80,7 @@ class _MasterItemPageState extends State<MasterItemPage> {
         });
       });
 
+      // Load the local master items after fetching new data
       await loadLocalMasterItems();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -91,11 +93,26 @@ class _MasterItemPageState extends State<MasterItemPage> {
     }
   }
 
-  void searchItems() {
-    final searchQuery = searchController.text.trim();
+  // Method to handle search action
+  void searchItems() async {
+    final searchQuery = searchController.text.trim(); // Get the trimmed search input
     if (searchQuery.isNotEmpty) {
+      // Save the search query (brand) to shared preferences
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      await prefs.setString('lastSearchedBrand', searchQuery);
+
       fetchMasterItems(searchQuery);
     }
+  }
+
+  // Load the last searched brand from shared preferences and set it to the searchController
+  Future<void> loadLastSearchedBrand() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? savedBrand = prefs.getString('lastSearchedBrand') ?? '';
+    setState(() {
+      lastSearchedBrand = savedBrand;
+      searchController.text = savedBrand; // Set the saved brand to searchController
+    });
   }
 
   @override
@@ -109,7 +126,7 @@ class _MasterItemPageState extends State<MasterItemPage> {
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: TextField(
-              controller: searchController,
+              controller: searchController, // TextController now retains the saved brand
               decoration: InputDecoration(
                 labelText: 'Search by Brand',
                 border: OutlineInputBorder(),
@@ -122,18 +139,28 @@ class _MasterItemPageState extends State<MasterItemPage> {
               inputFormatters: [UpperCaseTextFormatter()],
             ),
           ),
-          
           isLoading
               ? Center(child: CircularProgressIndicator())
-              : Center(
-                  child: Text(
-                    '${items.length} master items saved locally !!',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                ),
+              : Column(
+                  children: [
+                    Center(
+                      child: Text(
+                        '${items.length} master items saved locally !! ${searchController.text}',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    // if (lastSearchedBrand.isNotEmpty)
+                    //   Padding(
+                    //     padding: const EdgeInsets.all(8.0),
+                    //     child: Text(
+                    //       'Brand: $lastSearchedBrand',
+                    //       style: TextStyle(fontSize: 16, fontStyle: FontStyle.italic),
+                    //     ),
+                    //   ),
         ],
       ),
-    );
+        ]
+    ));
   }
 }
 

@@ -147,7 +147,7 @@ class _MyDrawerState extends State<MyDrawer> {
                 leading: Icon(Icons.document_scanner),
                 title: const Text("Scan PO"),
                 onTap: () {
-                   Navigator.pop(context); // Close the drawer
+                   Navigator.pop(context);  
                   Navigator.push(
                     context,
                     MaterialPageRoute(builder: (context) => ScanQRPage()),
@@ -158,7 +158,7 @@ class _MyDrawerState extends State<MyDrawer> {
                 leading: Icon(Icons.document_scanner),
                 title: const Text("Scan PO Defect"),
                 onTap: () {
-                  Navigator.pop(context); // Close the drawer
+                  Navigator.pop(context);  
                   Navigator.push(
                     context,
                     MaterialPageRoute(builder: (context) => ScanQRDefectPage()),
@@ -171,7 +171,7 @@ class _MyDrawerState extends State<MyDrawer> {
                 leading: Icon(Icons.article),
                 title: const Text("Master Item"),
                 onTap: () {
-                   Navigator.pop(context); // Close the drawer
+                   Navigator.pop(context);  
                   Navigator.push(
                     context,
                     MaterialPageRoute(builder: (context) => MasterItemPage()),
@@ -183,7 +183,7 @@ class _MyDrawerState extends State<MyDrawer> {
                 leading: Icon(Icons.history),
                 title: const Text("Recent PO"),
                 onTap: () {
-                   Navigator.pop(context); // Close the drawer
+                   Navigator.pop(context);  
                   Navigator.push(
                     context,
                     MaterialPageRoute(builder: (context) => RecentPOPage()),
@@ -194,7 +194,7 @@ class _MyDrawerState extends State<MyDrawer> {
                 leading: Icon(Icons.history),
                 title: const Text("Recent PO Defect"),
                 onTap: () {
-                  Navigator.pop(context); // Close the drawer
+                  Navigator.pop(context);  
                   Navigator.push(
                     context,
                     MaterialPageRoute(builder: (context) => RecentDefectPOPage()),

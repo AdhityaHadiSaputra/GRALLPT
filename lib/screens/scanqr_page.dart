@@ -48,18 +48,56 @@ class _ScanQRPageState extends State<ScanQRPage> {
   FocusNode textsecond = FocusNode();
   final AudioPlayer _audioPlayer = AudioPlayer();
 
+  Map<int, TextEditingController> _controllers = {};
+  Map<int, TextEditingController> _controllers1 = {};
+  Map<int, TextEditingController> _controllers2 = {};
+
+
+    Map<String, dynamic> mutableResult = {};
+
   @override
   void initState() {
     super.initState();
     if (widget.initialPOData != null) {
       detailPOData = [widget.initialPOData!];
+
+      mutableResult = widget.initialPOData!; 
     }
+    
+     for (var i = 0; i < scannedResults.length; i++) {
+      _controllers[i] = TextEditingController(
+        text: scannedResults[i]['qty_scanned'].toString(),
+        
+      );
+      
+     }
+     for (var i = 0; i < differentScannedResults.length; i++) {
+      _controllers1[i] = TextEditingController(
+        text: differentScannedResults[i]['qty_scanned'].toString(),
+      );
+     }
+     for (var i = 0; i < noitemScannedResults.length; i++) {
+      _controllers2[i] = TextEditingController(
+        text: noitemScannedResults[i]['qty_scanned'].toString(),
+      );
+     }
   }
+  
+
 
   @override
   void dispose() {
-    controller?.dispose();
+     _controllers.forEach((key, controller) {
+      controller.dispose();
+    });
+    _controllers1.forEach((key, controller) {
+      controller.dispose();
+    });
+    _controllers2.forEach((key, controller) {
+      controller.dispose();
+    });
     _audioPlayer.dispose(); 
+   
     super.dispose();
   }
 
@@ -199,7 +237,7 @@ class _ScanQRPageState extends State<ScanQRPage> {
       await dbHelper.insertOrUpdatePO(poData);
     }
     Flushbar(
-        message: 'Po Data Save',
+        message: 'Scanned Berhasil',
         duration: Duration(seconds: 3),
         flushbarPosition: FlushbarPosition.TOP,
         backgroundColor: Colors.green,
@@ -221,7 +259,7 @@ class _ScanQRPageState extends State<ScanQRPage> {
         playBeep();
         controller?.pauseCamera();
         await checkAndSumQty(scannedBarcode);
-        Future.delayed(const Duration(seconds: 1), () {
+        Future.delayed(const Duration(seconds: 2), () {
           controller?.resumeCamera();
         });
       }
@@ -574,9 +612,35 @@ int calculateTotalQtyScanned() {
     await prefs.setStringList('recent_pos', recentNoPOs);
   }
 
+  void clearSession() {
+  _poNumberController.clear();
+  _koliController.clear();
+  scannedResults.clear();
+  differentScannedResults.clear();
+  noitemScannedResults.clear();
+  detailPOData.clear();
+}
+
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+      return WillPopScope(
+    onWillPop: () async {
+     
+      
+
+      // Clear other data if necessary
+      _poNumberController.clear();
+      _koliController.clear();
+      scannedResults.clear();
+      differentScannedResults.clear();
+      noitemScannedResults.clear();
+      detailPOData.clear();
+
+      // Allow the back navigation
+      return false; 
+    },
+    child:  Scaffold(
         resizeToAvoidBottomInset: false,
         appBar: AppBar(
           title: const Text('PO Details'),
@@ -686,7 +750,9 @@ int calculateTotalQtyScanned() {
                 labelText: 'Enter Barcode',
                 border: OutlineInputBorder(),
               ),
+              
               focusNode: textsecond,
+              enabled: _poNumberController.text.isNotEmpty && _koliController.text.isNotEmpty,
               onFieldSubmitted: (value) 
               
               {
@@ -744,136 +810,205 @@ int calculateTotalQtyScanned() {
              
               ],
               rows: [
-  ...scannedResults.map(
-    (result) {
-      // Create a mutable copy of the result
-      Map<String, dynamic> mutableResult = Map.from(result);
+  ...scannedResults.asMap().entries.map(
+          (entry) {
+       int index = entry.key;
+            Map<String, dynamic> result = entry.value;
+            Map<String, dynamic> mutableResult = Map.from(result);
+
+            
+            _controllers[index] ??= TextEditingController(
+              text: mutableResult['qty_scanned'].toString(),
+            );
 
       return DataRow(
-        cells: [
-          DataCell(Text(mutableResult['pono'] ?? '')),
-          DataCell(Text(mutableResult['item_sku'] ?? '')),
-          DataCell(Text(mutableResult['item_name'] ?? '')),
-          DataCell(Text(mutableResult['barcode'] ?? '')),
-          DataCell(Text(mutableResult['vendorbarcode'] ?? '')),
-          DataCell(
-            TextFormField(
-              initialValue: mutableResult['qty_scanned'].toString(),
-              keyboardType: TextInputType.number,
-              onFieldSubmitted: (newValue) {
-                // Update the scanned quantity directly
-                int? updatedQty = int.tryParse(newValue);
-                if (updatedQty != null) {
-                  setState(() {
-                    mutableResult['qty_scanned'] = updatedQty;
-                    int index = scannedResults.indexWhere((r) => r['barcode'] == result['barcode']);
-                    if (index != -1) {
-                      scannedResults[index] = mutableResult;
-                    }
+      cells: [
+        DataCell(Text(mutableResult['pono'] ?? '')),
+        DataCell(Text(mutableResult['item_sku'] ?? '')),
+        DataCell(Text(mutableResult['item_name'] ?? '')),
+        DataCell(Text(mutableResult['barcode'] ?? '')),
+        DataCell(Text(mutableResult['vendorbarcode'] ?? '')),
+       DataCell(
+                  TextFormField(
+                    controller: _controllers[index], // Use controller for each field
+                    keyboardType: TextInputType.number,
+                    onFieldSubmitted: (newValue) {
+                      int? updatedQty = int.tryParse(newValue);
 
-                    // Optional: Update backend with new quantity
-                    submitScannedResults();
-                    submitScannedMasterItemsResults();
-                    submitScannedNoItemsResults();
-                  });
-                }
-              },
-            ),
-          ),
-          DataCell(Text(mutableResult['user'] ?? '')),
-          DataCell(Text(mutableResult['device_name'] ?? '')),
-          DataCell(Text(mutableResult['qty_koli'].toString())),
-          DataCell(Text(mutableResult['scandate'] ?? '')),
-        ],
-      );
+                      // Ensure the value is not less than 1
+                      if (updatedQty != null && updatedQty >= 1) {
+                        setState(() {
+                          mutableResult['qty_scanned'] = updatedQty;
+                          scannedResults[index] = mutableResult;
+
+                          // Optional: Update backend with new quantity
+                          submitScannedResults();
+                          submitScannedMasterItemsResults();
+                          submitScannedNoItemsResults();
+
+                          Flushbar(
+                            message: 'Quantity updated successfully!',
+                            duration: Duration(seconds: 5),
+                            flushbarPosition: FlushbarPosition.TOP,
+                            backgroundColor: Colors.green,
+                          ).show(context);
+                        });
+                      } else {
+                        // Show a warning if the value is below 1
+                        Flushbar(
+                          message: 'Quantity must be 1 or greater!',
+                          duration: Duration(seconds: 3),
+                          flushbarPosition: FlushbarPosition.TOP,
+                          backgroundColor: Colors.red,
+                        ).show(context);
+
+                        // Revert the text field to the last valid value
+                        _controllers[index]?.text = mutableResult['qty_scanned'].toString();
+                      }
+                    },
+                  ),
+                ),
+
+
+        DataCell(Text(mutableResult['user'] ?? '')),
+        DataCell(Text(mutableResult['device_name'] ?? '')),
+        DataCell(Text(mutableResult['qty_koli'].toString())),
+        DataCell(Text(mutableResult['scandate'] ?? '')),
+      ],
+    );
+
+
     },
   ),
-  ...differentScannedResults.map(
-    (result) {
-      // Create a mutable copy of the result
-      Map<String, dynamic> mutableResult = Map.from(result);
+  ...differentScannedResults.asMap().entries.map(
+          (entry) {
+       int index = entry.key;
+            Map<String, dynamic> result = entry.value;
+            Map<String, dynamic> mutableResult = Map.from(result);
+
+            
+            _controllers1[index] ??= TextEditingController(
+              text: mutableResult['qty_scanned'].toString(),
+            );
 
       return DataRow(
-        cells: [
-          DataCell(Text(mutableResult['pono'] ?? '')),
-          DataCell(Text(mutableResult['item_sku'] ?? '')),
-          DataCell(Text(mutableResult['item_name'] ?? '')),
-          DataCell(Text(mutableResult['barcode'] ?? '')),
-          DataCell(Text(mutableResult['vendorbarcode'] ?? '')),
-          DataCell(
-            TextFormField(
-              initialValue: mutableResult['qty_scanned'].toString(),
-              keyboardType: TextInputType.number,
-              onFieldSubmitted: (newValue) {
-                // Update the scanned quantity directly
-                int? updatedQty = int.tryParse(newValue);
-                if (updatedQty != null) {
-                  setState(() {
-                    mutableResult['qty_scanned'] = updatedQty;
-                    int index = differentScannedResults.indexWhere((r) => r['barcode'] == result['barcode']);
-                    if (index != -1) {
-                      differentScannedResults[index] = mutableResult;
-                    }
+      cells: [
+        DataCell(Text(mutableResult['pono'] ?? '')),
+        DataCell(Text(mutableResult['item_sku'] ?? '')),
+        DataCell(Text(mutableResult['item_name'] ?? '')),
+        DataCell(Text(mutableResult['barcode'] ?? '')),
+        DataCell(Text(mutableResult['vendorbarcode'] ?? '')),
+        DataCell(
+                  TextFormField(
+                    controller: _controllers1[index], // Use controller for each field
+                    keyboardType: TextInputType.number,
+                    onFieldSubmitted: (newValue) {
+                      int? updatedQty = int.tryParse(newValue);
 
-                    // Optional: Update backend with new quantity
-                    submitScannedResults();
-                    submitScannedMasterItemsResults();
-                    submitScannedNoItemsResults();
-                  });
-                }
-              },
-            ),
-          ),
-          DataCell(Text(mutableResult['user'] ?? '')),
-          DataCell(Text(mutableResult['device_name'] ?? '')),
-          DataCell(Text(mutableResult['qty_koli'].toString())),
-          DataCell(Text(mutableResult['scandate'] ?? '')),
-        ],
-      );
+                      // Ensure the value is not less than 1
+                      if (updatedQty != null && updatedQty >= 1) {
+                        setState(() {
+                          mutableResult['qty_scanned'] = updatedQty;
+                          differentScannedResults[index] = mutableResult;
+
+                          // Optional: Update backend with new quantity
+                          submitScannedResults();
+                          submitScannedMasterItemsResults();
+                          submitScannedNoItemsResults();
+
+                          Flushbar(
+                            message: 'Quantity updated successfully!',
+                            duration: Duration(seconds: 5),
+                            flushbarPosition: FlushbarPosition.TOP,
+                            backgroundColor: Colors.green,
+                          ).show(context);
+                        });
+                      } else {
+                        // Show a warning if the value is below 1
+                        Flushbar(
+                          message: 'Quantity must be 1 or greater!',
+                          duration: Duration(seconds: 3),
+                          flushbarPosition: FlushbarPosition.TOP,
+                          backgroundColor: Colors.red,
+                        ).show(context);
+
+                        // Revert the text field to the last valid value
+                        _controllers1[index]?.text = mutableResult['qty_scanned'].toString();
+                      }
+                    },
+                  ),
+                ),
+        DataCell(Text(mutableResult['user'] ?? '')),
+        DataCell(Text(mutableResult['device_name'] ?? '')),
+        DataCell(Text(mutableResult['qty_koli'].toString())),
+        DataCell(Text(mutableResult['scandate'] ?? '')),
+      ],
+    );
     },
   ),
-  ...noitemScannedResults.map(
-    (result) {
-      // Create a mutable copy of the result
-      Map<String, dynamic> mutableResult = Map.from(result);
+  ...noitemScannedResults.asMap().entries.map(
+          (entry) {
+       int index = entry.key;
+            Map<String, dynamic> result = entry.value;
+            Map<String, dynamic> mutableResult = Map.from(result);
 
+            
+            _controllers2[index] ??= TextEditingController(
+              text: mutableResult['qty_scanned'].toString(),
+            );
       return DataRow(
-        cells: [
-          DataCell(Text(mutableResult['pono'] ?? '')),
-          DataCell(Text(mutableResult['item_sku'] ?? '')),
-          DataCell(Text(mutableResult['item_name'] ?? '')),
-          DataCell(Text(mutableResult['barcode'] ?? '')),
-          DataCell(Text(mutableResult['vendorbarcode'] ?? '')),
-          DataCell(
-            TextFormField(
-              initialValue: mutableResult['qty_scanned'].toString(),
-              keyboardType: TextInputType.number,
-              onFieldSubmitted: (newValue) {
-                // Update the scanned quantity directly
-                int? updatedQty = int.tryParse(newValue);
-                if (updatedQty != null) {
-                  setState(() {
-                    mutableResult['qty_scanned'] = updatedQty;
-                    int index = noitemScannedResults.indexWhere((r) => r['barcode'] == result['barcode']);
-                    if (index != -1) {
-                      noitemScannedResults[index] = mutableResult;
-                    }
+      cells: [
+        DataCell(Text(mutableResult['pono'] ?? '')),
+        DataCell(Text(mutableResult['item_sku'] ?? '')),
+        DataCell(Text(mutableResult['item_name'] ?? '')),
+        DataCell(Text(mutableResult['barcode'] ?? '')),
+        DataCell(Text(mutableResult['vendorbarcode'] ?? '')),
+        DataCell(
+                  TextFormField(
+                    controller: _controllers2[index], // Use controller for each field
+                    keyboardType: TextInputType.number,
+                    onFieldSubmitted: (newValue) {
+                      int? updatedQty = int.tryParse(newValue);
 
-                    // Optional: Update backend with new quantity
-                    submitScannedResults();
-                    submitScannedMasterItemsResults();
-                    submitScannedNoItemsResults();
-                  });
-                }
-              },
-            ),
-          ),
-          DataCell(Text(mutableResult['user'] ?? '')),
-          DataCell(Text(mutableResult['device_name'] ?? '')),
-          DataCell(Text(mutableResult['qty_koli'].toString())),
-          DataCell(Text(mutableResult['scandate'] ?? '')),
-        ],
-      );
+                      // Ensure the value is not less than 1
+                      if (updatedQty != null && updatedQty >= 1) {
+                        setState(() {
+                          mutableResult['qty_scanned'] = updatedQty;
+                          differentScannedResults[index] = mutableResult;
+
+                          // Optional: Update backend with new quantity
+                          submitScannedResults();
+                          submitScannedMasterItemsResults();
+                          submitScannedNoItemsResults();
+
+                          Flushbar(
+                            message: 'Quantity updated successfully!',
+                            duration: Duration(seconds: 5),
+                            flushbarPosition: FlushbarPosition.TOP,
+                            backgroundColor: Colors.green,
+                          ).show(context);
+                        });
+                      } else {
+                        // Show a warning if the value is below 1
+                        Flushbar(
+                          message: 'Quantity must be 1 or greater!',
+                          duration: Duration(seconds: 3),
+                          flushbarPosition: FlushbarPosition.TOP,
+                          backgroundColor: Colors.red,
+                        ).show(context);
+
+                        // Revert the text field to the last valid value
+                        _controllers2[index]?.text = mutableResult['qty_scanned'].toString();
+                      }
+                    },
+                  ),
+                ),
+        DataCell(Text(mutableResult['user'] ?? '')),
+        DataCell(Text(mutableResult['device_name'] ?? '')),
+        DataCell(Text(mutableResult['qty_koli'].toString())),
+        DataCell(Text(mutableResult['scandate'] ?? '')),
+      ],
+    );
     },
   ),
 ]
@@ -884,24 +1019,9 @@ int calculateTotalQtyScanned() {
       ),
    
       const SizedBox(height: 20),
-      ElevatedButton(
-        onPressed: () {
-          if (_poNumberController.text.trim().isEmpty) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Please enter a PO number before scanning.'),
-              ),
-            );
-            return;
-          }
-          if (_koliController.text.trim().isEmpty) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Please enter koli quantity before scanning'),
-              ),
-            );
-            return;
-          }
+     ElevatedButton(
+  onPressed: (_poNumberController.text.isNotEmpty && _koliController.text.isNotEmpty)
+      ? () {
           Navigator.push(
             context,
             MaterialPageRoute(
@@ -911,17 +1031,19 @@ int calculateTotalQtyScanned() {
               ),
             ),
           ).then((_) {
+            // Handle the result if needed
           });
-        },
-        child: const Text('Scan QR Code'),
-      ),
+        }
+      : null, // Disable button if PO number or koli is empty
+  child: const Text('Scan QR Code'),
+),
     ],
   ),
 )
                         ]
                   )
           )
-            
+    ) 
         );
   }
 }
