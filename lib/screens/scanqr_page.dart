@@ -196,10 +196,12 @@ class _ScanQRPageState extends State<ScanQRPage> {
     String poNumber = _poNumberController.text.trim();
 
     if (poNumber.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Please search for a PO before submitting data')),
-      );
+       Flushbar(
+        message: 'Please search for a PO before submitting data',
+        duration: Duration(seconds: 3),
+        flushbarPosition: FlushbarPosition.TOP,
+        backgroundColor: Colors.red,
+    ).show(context);
       return;
     }
 
@@ -418,7 +420,6 @@ Future<void> checkAndSumQty(String scannedCode) async {
 }
 
 
-// Function to prompt for manual item name input
 Future<String?> _promptManualItemNameInput(String scannedCode) async {
    
   return showDialog<String>(
@@ -472,7 +473,7 @@ Future<String?> _promptManualItemNameInput(String scannedCode) async {
           result); // Assuming you have a method for this
     }
     Flushbar(
-        message: 'Unrecognize Po Data Save',
+        message: 'Scanned Berhasil',
         duration: Duration(seconds: 3),
         flushbarPosition: FlushbarPosition.TOP,
         backgroundColor: Colors.green,
@@ -487,7 +488,7 @@ Future<String?> _promptManualItemNameInput(String scannedCode) async {
           result); // Assuming you have a method for this
     }
     Flushbar(
-        message: 'Unrecognize Po Data Save',
+        message: 'Scanned Berhasil',
         duration: Duration(seconds: 3),
         flushbarPosition: FlushbarPosition.TOP,
         backgroundColor: Colors.green,
@@ -911,7 +912,6 @@ int calculateTotalQtyScanned() {
                           mutableResult['qty_scanned'] = updatedQty;
                           differentScannedResults[index] = mutableResult;
 
-                          // Optional: Update backend with new quantity
                           submitScannedResults();
                           submitScannedMasterItemsResults();
                           submitScannedNoItemsResults();

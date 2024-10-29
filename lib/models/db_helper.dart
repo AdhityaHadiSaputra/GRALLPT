@@ -902,35 +902,41 @@ Future<void> clearMasterItems() async {
   
 
  
- Future<List<Map<String, dynamic>>> getSummaryRecentPOs(String userId) async {
+Future<List<Map<String, dynamic>>> getSummaryRecentPOs(String userId) async {
   final db = await database;
-  final query = 'SELECT item_sku, item_name, barcode, vendorbarcode, SUM(qty_scanned) as totalscan FROM scanned_results WHERE user = ? GROUP BY item_sku, item_name, barcode';
-  return await db.rawQuery(query, [userId]); 
+  final query = '''
+    SELECT pono, item_sku, item_name, barcode, vendorbarcode, SUM(qty_scanned) AS totalscan
+    FROM scanned_results 
+    WHERE user = ? 
+    GROUP BY pono, item_sku, item_name, barcode, vendorbarcode
+  ''';
+  return await db.rawQuery(query, [userId]);
 }
+
  Future<List<Map<String, dynamic>>> getSummaryMasterRecentPOs(String userId) async {
   final db = await database;
-  final query = 'SELECT item_sku, item_name, barcode, vendorbarcode, SUM(qty_scanned) as totalscan FROM scanned_master WHERE user = ? GROUP BY item_sku, item_name, barcode';
+  final query = 'SELECT pono, item_sku, item_name, barcode, vendorbarcode, SUM(qty_scanned) as totalscan FROM scanned_master WHERE user = ? GROUP BY pono, item_sku, item_name, barcode';
   return await db.rawQuery(query, [userId]); 
 }
    Future<List<Map<String, dynamic>>> getSummaryRecentNoPO(String userId) async {
     final db = await database;
     final query = 
-        'SELECT item_sku, item_name, barcode, vendorbarcode, SUM(qty_scanned) as totalscan FROM noitems WHERE user = ? GROUP BY item_sku, item_name, barcode';
+        'SELECT pono, item_sku, item_name, barcode, vendorbarcode, SUM(qty_scanned) as totalscan FROM noitems WHERE user = ? GROUP BY pono, item_sku, item_name, barcode';
     return await db.rawQuery(query, [userId]); 
   }
   Future<List<Map<String, dynamic>>> getSummaryDefecttPOs(String userId) async {
     final db = await database;
-    final query = 'SELECT item_sku, item_name, barcode, vendorbarcode, SUM(qty_scanned) as totalscan FROM defect WHERE user = ? GROUP BY item_sku, item_name, barcode';
+    final query = 'SELECT pono, item_sku, item_name, barcode, vendorbarcode, SUM(qty_scanned) as totalscan FROM defect WHERE user = ? GROUP BY pono, item_sku, item_name, barcode';
     return await db.rawQuery(query, [userId]); 
   }
 Future<List<Map<String, dynamic>>> getSummaryDefectMasterPOs(String userId) async {
     final db = await database;
-    final query = 'SELECT item_sku, item_name, barcode, vendorbarcode, SUM(qty_scanned) as totalscan FROM defect_master WHERE user = ? GROUP BY item_sku, item_name, barcode';
+    final query = 'SELECT pono, item_sku, item_name, barcode, vendorbarcode, SUM(qty_scanned) as totalscan FROM defect_master WHERE user = ? GROUP BY pono, item_sku, item_name, barcode';
     return await db.rawQuery(query, [userId]); 
   }
   Future<List<Map<String, dynamic>>> getSummaryDefectNoPOs(String userId) async {
     final db = await database;
-    final query = 'SELECT item_sku, item_name, barcode, vendorbarcode, SUM(qty_scanned) as totalscan FROM defect_no WHERE user = ? GROUP BY item_sku, item_name, barcode';
+    final query = 'SELECT pono, item_sku, item_name, barcode, vendorbarcode, SUM(qty_scanned) as totalscan FROM defect_no WHERE user = ? GROUP BY pono, item_sku, item_name, barcode';
     return await db.rawQuery(query, [userId]); 
   }
 
@@ -1034,6 +1040,14 @@ Future<void> deletePOScannedDifferentResult(String poNumber) async {
     final db = await database;
     await db.delete(
       'scanned_master',
+      where: 'pono = ? AND type = ?',
+      whereArgs: [poNumber, scannedPOType],
+    );
+  }
+    Future<void> deletePOScannedNoItemsResult(String poNumber) async {
+    final db = await database;
+    await db.delete(
+      'noitems',
       where: 'pono = ? AND type = ?',
       whereArgs: [poNumber, scannedPOType],
     );

@@ -32,8 +32,6 @@ class _PODetailPageState extends State<PODetailPage> {
   List<Map<String, dynamic>> recentPOSummary = [];
   List<Map<String, dynamic>> recentMasterPOSummary = [];
   List<Map<String, dynamic>> recentNoPOSummary = [];
-
-  // List<Map<String, dynamic>> scannedOverResults = [];
   bool isLoading = true;
   final GlobalKey qrKey = GlobalKey(debugLabel: 'QR');
   QRViewController? controller;
@@ -48,10 +46,9 @@ class _PODetailPageState extends State<PODetailPage> {
     fetchScannedResults();
     fetchMasterItemsResults();
     fetchNoItemsResults();
-  fetchSummaryRecentPOs();
-  fetchSummaryRecentMasterPOs();
-  fetchSummaryRecentNoPO();
-    // fetchScannedOverResults();
+    fetchSummaryRecentPOs();
+    fetchSummaryRecentMasterPOs();
+    fetchSummaryRecentNoPO();
     fetchData(); 
   }
 
@@ -140,7 +137,6 @@ Future<void> fetchSummaryRecentNoPO() async {
       return;  
     }
 
-  
     final summary = await dbHelper.getSummaryRecentNoPO(userId);
 
     setState(() {
@@ -152,10 +148,6 @@ Future<void> fetchSummaryRecentNoPO() async {
     print('Error fetching recent PO summary: $e');
   }
 }
-
-
-
-
 
   Future<void> fetchData() async {
     try {
@@ -212,136 +204,8 @@ Future<void> fetchSummaryRecentNoPO() async {
       print('Error fetching scanned results: $e');
     }
   }
-  void _startScanningForItem(String barcode) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => QRScannerPage(
-          onQRScanned: checkAndSumQty,
-          playBeep: playBeep,
-        ),
-      ),
-    );
-  }
-  void _handleOverScannedItem(Map<String, dynamic> item, String scannedCode) {
- 
-  setState(() {
-    noitemScannedResults.add({
-      'pono': widget.poNumber,
-      'item_sku': item['item_sku'],
-      'item_name': item['item_name'],
-      'barcode': scannedCode,
-      'vendorbarcode': item['vendorbarcode'],
-      'qty_scanned': item['qty_scanned'],
-      'scandate': DateTime.now().toString(),
-      'device_name': item['device_name'],
-      'user': userId,
-      'qty_koli': 0,
-      'type': 'over',
-    });
-  });
 
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(content: Text('Over-scanned item! Exceeds PO quantity.')),
-  );
-}
 
-  void checkAndSumQty(String scannedCode) {
-    for (var item in poDetails) {
-    if (item['barcode'] == scannedCode) {
-   
-      int poQty = int.tryParse(item['qty_po'].toString()) ?? 0;
-      int scannedQty = int.tryParse(item['qty_scanned']?.toString() ?? '0') ?? 0;
-
-    
-      if (scannedQty > poQty) {
-        _handleOverScannedItem(item, scannedCode);
-        return;
-      }
-
-     
-      _showQtyInputDialog(item, scannedCode);
-      return;
-    }
-  }
-
-    bool foundInScanned = scannedResults.any((result) => result['barcode'] == scannedCode);
-    // bool foundInScannedOver = scannedOverResults.any((result) => result['barcode'] == scannedCode);
-
-    if (!foundInScanned ) { //&& !foundInScannedOver
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No matching item found for scanned barcode')),
-      );
-    }
-  }
-
-  void _showQtyInputDialog(Map<String, dynamic> item, String scannedCode) {
-    TextEditingController _qtyController = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text('Input Quantity for ${item['item_name']}'),
-          content: TextField(
-            controller: _qtyController,
-            keyboardType: TextInputType.number,
-            decoration: InputDecoration(
-              labelText: 'Quantity',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () async {
-                int inputQty = int.tryParse(_qtyController.text) ?? 0;
-                if (inputQty > 0) {
-                  await _updateScannedItem(item, inputQty);
-                }
-                Navigator.of(context).pop();
-              },
-              child: Text('Confirm'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-Future<void> _updateScannedItem(Map<String, dynamic> item, int inputQty) async {
-  var updatedItem = Map<String, dynamic>.from(item);
-  int qtyPO = int.tryParse(updatedItem['qty_po'].toString()) ?? 0;
-  int existingQty = int.tryParse(updatedItem['qty_scanned'].toString()) ?? 0;
-
-  int newQtyScanned = existingQty + inputQty;
-  int qtyDifferent = (newQtyScanned > qtyPO) ? newQtyScanned - qtyPO : 0;
-
-  updatedItem['qty_scanned'] = (newQtyScanned > qtyPO) ? qtyPO : newQtyScanned;
-  updatedItem['qty_different'] = qtyDifferent;
-
- 
-  Map<String, dynamic> scannedData = {
-    "pono": widget.poNumber,
-    "item_sku": updatedItem['item_sku'],  
-    "item_name": updatedItem['item_name'],
-    "barcode": updatedItem['barcode'],
-    "vendorbarcode": updatedItem['vendorbarcode'] ?? '',
-    "qty_scanned": updatedItem['qty_scanned'],
-    "scandate": DateTime.now().toString(),
-    "device_name": updatedItem['device_name'],
-  };
-
-  await dbHelper.insertOrUpdateScannedResults(scannedData);
-
- 
-  fetchPODetails();
-  fetchScannedResults();
-  fetchNoItemsResults();
-}
 
   void _deleteScannedResult(String scandate) async {
     await dbHelper.deletePOResult(widget.poNumber, scandate);
@@ -443,21 +307,59 @@ if (noitemScannedResults.isNotEmpty) {
       );
     }
   }
-  Widget buildRecentPOSummary() {
-  int grandTotal = recentPOSummary.fold(0, (int sum, detail) {
-      return sum + (detail['totalscan'] as int? ?? 0);
-    });
-  int calculateGrandTotal() {
-    int totalMaster = recentMasterPOSummary.fold(0, (sum, detail) {
-      return sum + (detail['totalscan'] as int? ?? 0);
-    });
+Map<String, List<Map<String, dynamic>>> groupSummaryByPONumber(List<Map<String, dynamic>> summary) {
+  final Map<String, List<Map<String, dynamic>>> groupedSummary = {};
 
-    int totalNoPO = recentNoPOSummary.fold(0, (sum, detail) {
-      return sum + (detail['totalscan'] as int? ?? 0);
-    });
-
-    return totalMaster + totalNoPO;  
+  for (var item in summary) {
+    String pono = item['pono'];
+    if (!groupedSummary.containsKey(pono)) {
+      groupedSummary[pono] = [];
+    }
+    groupedSummary[pono]!.add(item);
   }
+
+  return groupedSummary;
+}
+
+  Widget buildRecentPOSummary() {
+    final groupedSummary = groupSummaryByPONumber(recentPOSummary);
+    final groupedSummary1 = groupSummaryByPONumber(recentMasterPOSummary);
+    final groupedSummary2 = groupSummaryByPONumber(recentNoPOSummary);
+
+    
+
+ int grandTotal = 0; // Initialize grandTotal to 0
+
+if (groupedSummary.containsKey(widget.poNumber)) {
+  // Only proceed if the key exists
+  grandTotal = groupedSummary[widget.poNumber]!.fold(0, (int sum, detail) {
+    return sum + (detail['totalscan'] as int? ?? 0);
+  });
+} else {
+  // Optionally handle the case where the key does not exist
+  print('PO number ${widget.poNumber} not found in groupedSummary.');
+}
+
+ int calculateGrandTotal() {
+ 
+  int totalMaster = 0;
+  int totalNoPO = 0;
+
+  if (groupedSummary1.containsKey(widget.poNumber)) {
+    totalMaster = groupedSummary1[widget.poNumber]!.fold(0, (sum, detail) {
+      return sum + (detail['totalscan'] as int? ?? 0);
+    });
+  }
+
+  if (groupedSummary2.containsKey(widget.poNumber)) {
+    totalNoPO = groupedSummary2[widget.poNumber]!.fold(0, (sum, detail) {
+      return sum + (detail['totalscan'] as int? ?? 0);
+    });
+  }
+
+  return totalMaster + totalNoPO;  
+}
+
 
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
@@ -486,8 +388,6 @@ if (noitemScannedResults.isNotEmpty) {
           
         ],
       ),
-      
-      
     ),
   Padding(
       padding: const EdgeInsets.all(8.0),
@@ -512,8 +412,7 @@ if (noitemScannedResults.isNotEmpty) {
           ),
         ],
       ),
-      
-      
+        
     ),
       Padding(
         padding: const EdgeInsets.all(8.0),
@@ -529,15 +428,18 @@ if (noitemScannedResults.isNotEmpty) {
         scrollDirection: Axis.horizontal,
         child: DataTable(
           columns: const [
+            DataColumn(label: Text('PO NO')),
             DataColumn(label: Text('Item SKU')),
             DataColumn(label: Text('Item Name')),
             DataColumn(label: Text('Barcode')),
             DataColumn(label: Text('VendorBarcode')),
             DataColumn(label: Text('Total Scanned')),
           ],
-          rows: [
-            ...recentPOSummary.reversed.map((detail) {
-              return DataRow(cells: [
+        rows: [
+  // Check if the key exists in groupedSummary before accessing it
+  if (groupedSummary.containsKey(widget.poNumber)) ...groupedSummary[widget.poNumber]!.reversed.map((detail) {
+    return DataRow(cells: [
+                DataCell(Text(detail['pono'] ?? '')),
                 DataCell(Text(detail['item_sku'] ?? '')),
                 DataCell(Text(detail['item_name'] ?? '')),
                 DataCell(Text(detail['barcode'] ?? '')),
@@ -545,7 +447,6 @@ if (noitemScannedResults.isNotEmpty) {
                 DataCell(Text(detail['totalscan'].toString())),
               ]);
             }).toList(),
-            // Add a row for the grand total
            
           ],
         ),
@@ -554,6 +455,9 @@ if (noitemScannedResults.isNotEmpty) {
   );
 }
 Widget buildRecentNoPOSummary() {
+  final groupedSummary1 = groupSummaryByPONumber(recentMasterPOSummary);
+  final groupedSummary2 = groupSummaryByPONumber(recentNoPOSummary);
+
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
@@ -571,6 +475,7 @@ Widget buildRecentNoPOSummary() {
         scrollDirection: Axis.horizontal,
         child: DataTable(
           columns: const [
+            DataColumn(label: Text('PO NO')),
             DataColumn(label: Text('Item SKU')),
             DataColumn(label: Text('Item Name')),
             DataColumn(label: Text('Barcode')),
@@ -578,24 +483,30 @@ Widget buildRecentNoPOSummary() {
             DataColumn(label: Text('Total Scanned')),
           ],
           rows: [
-            ...recentNoPOSummary.reversed.map((detail) {
-              return DataRow(cells: [
-                DataCell(Text(detail['item_sku'] ?? '')),
-                DataCell(Text(detail['item_name'] ?? '')),
-                DataCell(Text(detail['barcode'] ?? '')),
-                DataCell(Text(detail['vendorbarcode'] ?? '')),
-                DataCell(Text(detail['totalscan']?.toString() ?? '0')),
-              ]);
-            }).toList(),
-            ...recentMasterPOSummary.reversed.map((detail) {
-              return DataRow(cells: [
-                DataCell(Text(detail['item_sku'] ?? '')),
-                DataCell(Text(detail['item_name'] ?? '')),
-                DataCell(Text(detail['barcode'] ?? '')),
-                DataCell(Text(detail['vendorbarcode'] ?? '')),
-                DataCell(Text(detail['totalscan']?.toString() ?? '0')),
-              ]);
-            }).toList(),
+            // Check if groupedSummary1 contains widget.poNumber
+            if (groupedSummary1.containsKey(widget.poNumber))
+              ...groupedSummary1[widget.poNumber]!.reversed.map((detail) {
+                return DataRow(cells: [
+                  DataCell(Text(detail['pono'] ?? '')),
+                  DataCell(Text(detail['item_sku'] ?? '')),
+                  DataCell(Text(detail['item_name'] ?? '')),
+                  DataCell(Text(detail['barcode'] ?? '')),
+                  DataCell(Text(detail['vendorbarcode'] ?? '')),
+                  DataCell(Text(detail['totalscan']?.toString() ?? '0')),
+                ]);
+              }).toList(),
+            // Check if groupedSummary2 contains widget.poNumber
+            if (groupedSummary2.containsKey(widget.poNumber))
+              ...groupedSummary2[widget.poNumber]!.reversed.map((detail) {
+                return DataRow(cells: [
+                  DataCell(Text(detail['pono'] ?? '')),
+                  DataCell(Text(detail['item_sku'] ?? '')),
+                  DataCell(Text(detail['item_name'] ?? '')),
+                  DataCell(Text(detail['barcode'] ?? '')),
+                  DataCell(Text(detail['vendorbarcode'] ?? '')),
+                  DataCell(Text(detail['totalscan']?.toString() ?? '0')),
+                ]);
+              }).toList(),
           ],
         ),
       ),
@@ -622,129 +533,7 @@ Widget buildRecentNoPOSummary() {
                     children: [
                        buildRecentPOSummary(),
                        buildRecentNoPOSummary(),
-                  
-                  //     SingleChildScrollView(
-                  // scrollDirection: Axis.vertical,
-                  // child: Column(
-                  //   crossAxisAlignment: CrossAxisAlignment.start,
-                  //   children: [
-                  //     SingleChildScrollView(
-                  //       scrollDirection: Axis.horizontal,
-                  //       child: DataTable(
-                  //         columns: const [
-                  //
-                  //           DataColumn(label: Text('PO NO')),
-                  //           DataColumn(label: Text('Item SKU')),
-                  //           DataColumn(label: Text('Item SKU Name')),
-                  //           DataColumn(label: Text('Barcode')),
-                  //           DataColumn(label: Text('VendorBarcode')),
-                  //           DataColumn(label: Text('QTY')),
-                  //           DataColumn(label: Text('AudUser')),
-                  //           DataColumn(label: Text('type')),
-                  //           DataColumn(label: Text('AudDate')),
-                  //           DataColumn(label: Text('MachineCd')),
-                  //           DataColumn(label: Text('QTY Koli')),
-                  //           DataColumn(label: Text('Actions')),
-                  //
-                  //
-                  //         ],
-                  //         rows: scannedResults.map((detail) {
-                  //           return DataRow(cells: [
-                  //
-                  //             DataCell(Text(detail['pono'] ?? '')),
-                  //             DataCell(Text(detail['item_sku'] ?? '')),
-                  //             DataCell(Text(detail['item_name'] ?? '')),
-                  //             DataCell(Text(detail['vendorbarcode'] ?? '')),
-                  //             DataCell(Text(detail['barcode'] ?? '')),
-                  //
-                  //             DataCell(Text((detail['qty_scanned'] ?? 0)
-                  //                 .toString())),
-                  //             DataCell(Text(detail['user'] ?? '')),
-                  //             DataCell(Text(detail['type'] ?? '')),
-                  //             DataCell(Text(detail['scandate'] != null
-                  //                 ? DateFormat('yyyy-MM-dd HH:mm:ss')
-                  //                     .format(DateTime.parse(detail['scandate']))
-                  //                 : '')),
-                  //             DataCell(Text(detail['device_name'] ?? '')),
-                  //             DataCell(Text((detail['qty_koli'] ?? 0).toString())),
-                  //             DataCell(
-                  //               Row(
-                  //                 children: [
-                  //                   TextButton(
-                  //                     onPressed: () {
-                  //                       _deleteScannedResult(
-                  //                           detail['scandate'] ?? '');
-                  //                     },
-                  //                     child: Icon(Icons.delete),
-                  //                   ),
-                  //
-                  //           ])
-                  //             )
-                  //           ]);
-                  //         }).toList(),
-                  //       ),
-                  //
-                  //     ),
-                  //
-                  //     SingleChildScrollView(
-                  // scrollDirection: Axis.vertical,
-                  // child: Column(
-                  //   crossAxisAlignment: CrossAxisAlignment.start,
-                  //   children: [
-                  //     SingleChildScrollView(
-                  //       scrollDirection: Axis.horizontal,
-                  //       child: DataTable(
-                  //         columns: const [
-                  //           DataColumn(label: Text('PONO')),
-                  //           DataColumn(label: Text('Item SKU')),
-                  //           DataColumn(label: Text('Item SKU Name')),
-                  //           DataColumn(label: Text('Barcode')),
-                  //           DataColumn(label: Text('VendorBarcode')),
-                  //           DataColumn(label: Text('QTY')),
-                  //           DataColumn(label: Text('AudUser')),
-                  //           DataColumn(label: Text('type')),
-                  //           DataColumn(label: Text('AudDate')),
-                  //           DataColumn(label: Text('MachineCd')),
-                  //           DataColumn(label: Text('QTY Koli')),
-                  //           DataColumn(label: Text('Actions')),
-                  //         ],
-                  //         rows: masterScannedResults.map((detail) {
-                  //           return DataRow(cells: [
-                  //             DataCell(Text(detail['pono'] ?? '')),
-                  //             DataCell(Text(detail['item_sku'] ?? '')),
-                  //             DataCell(Text(detail['item_name'] ?? '')),
-                  //             DataCell(Text(detail['vendorbarcode'] ?? '')),
-                  //             DataCell(Text(detail['barcode'] ?? '')),
-                  //             DataCell(Text((detail['qty_scanned'] ?? 0)
-                  //                 .toString())),
-                  //             DataCell(Text(detail['user'] ?? '')),
-                  //             DataCell(Text(detail['type'] ?? '')),
-                  //             DataCell(Text(detail['scandate'] != null
-                  //                 ? DateFormat('yyyy-MM-dd HH:mm:ss')
-                  //                     .format(DateTime.parse(detail['scandate']))
-                  //                 : '')),
-                  //             DataCell(Text(detail['device_name'] ?? '')),
-                  //             DataCell(Text((detail['qty_koli'] ?? 0).toString())),
-                  //             DataCell(
-                  //               Row(
-                  //                 children: [
-                  //                   TextButton(
-                  //                     onPressed: () {
-                  //                       _deleteScannedNoItemResult(
-                  //                           detail['scandate'] ?? '');
-                  //                     },
-                  //                     child: Icon(Icons.delete),
-                  //                   ),
-                  //
-                  //
-                  //           ])
-                  //             )
-                  //           ]);
-                  //         }).toList(),
-                  //       ),
-                  //
-                  //     ),
-                      
+                 
                       SizedBox(height: 20),  
                     Center(
                       child: ElevatedButton(
@@ -758,42 +547,7 @@ Widget buildRecentNoPOSummary() {
                   ),
               )
 
-
-    ); 
-  }
-}
-
-class QRScannerPage extends StatelessWidget {
-  final Function(String) onQRScanned;
-  final VoidCallback playBeep;
-
-  QRScannerPage({required this.onQRScanned, required this.playBeep});
-
-  @override
-  Widget build(BuildContext context) {
-    final GlobalKey qrKey = GlobalKey(debugLabel: 'QR');
-
-    return Scaffold(
-      appBar: AppBar(title: Text('Scan QR Code')),
-      body: QRView(
-        key: qrKey,
-        onQRViewCreated: (QRViewController controller) {
-          controller.scannedDataStream.listen((scanData) {
-            print('Scanned Data: ${scanData.code}'); 
-            if (scanData.code != null) {
-              playBeep(); 
-              onQRScanned(scanData.code!); 
-            }
-          });
-        },
-        overlay: QrScannerOverlayShape(
-          borderColor: Colors.red,
-          borderRadius: 10,
-          borderLength: 30,
-          borderWidth: 10,
-          cutOutSize: 300,
-        ),
-      ),
     );
+    // ]))]))); 
   }
 }

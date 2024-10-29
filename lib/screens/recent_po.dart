@@ -50,12 +50,21 @@ class _RecentPOPageState extends State<RecentPOPage> {
 
     setState(() {}); 
   }
+  Future<void> removeRecentMasterResult(String poNumber) async {
+    final prefs = await SharedPreferences.getInstance();
+    recentNoPOs.remove(poNumber);
+    await prefs.setStringList('recent_pos', recentNoPOs);
+
+    await dbHelper.deletePOScannedMasterResult(poNumber);
+
+    setState(() {}); 
+  }
   Future<void> removeRecentNOItemPOResult(String poNumber) async {
     final prefs = await SharedPreferences.getInstance();
     recentNoPOs.remove(poNumber);
     await prefs.setStringList('recent_pos', recentNoPOs);
 
-    await dbHelper.deletePONoItemsResult(poNumber);
+    await dbHelper.deletePOScannedNoItemsResult(poNumber);
 
     setState(() {}); 
   }
@@ -110,12 +119,13 @@ class _RecentPOPageState extends State<RecentPOPage> {
                             ),
                             const SizedBox(width: 8.0),
                             TextButton(
-                              onPressed: () {
-                                removeRecentPO(poNumber);
-                                removeRecentPOResult(poNumber);
-                                removeRecentNOItemPOResult(poNumber);
-                                clearAllScaned();
-                              },
+                             onPressed: () {
+  removeRecentPO(poNumber);           // Remove from recent POs
+  removeRecentPOResult(poNumber);     // Remove scanned with different results
+  removeRecentNOItemPOResult(poNumber);
+  removeRecentMasterResult(poNumber); // Remove scanned with no items
+},
+
                               child: const Column(
                                 children: [
                                   Icon(Icons.delete),

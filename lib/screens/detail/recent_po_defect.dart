@@ -224,7 +224,7 @@ class _PODefectPageState extends State<PODefectPage> {
     );
   }
   void _handleOverScannedItem(Map<String, dynamic> item, String scannedCode) {
-    // Insert the over-scanned item into the over-scanned list
+    
     setState(() {
       noitemScannedResults.add({
         'pono': widget.poNumber,
@@ -390,11 +390,9 @@ if (noitemScannedResults.isNotEmpty) {
   allResults.addAll(noitemScannedResults);
 }
 
-// Cek isi dari allResults setelah digabung
 print('All Results (gabungan scannedResults, masterScannedResults, noitemScannedResults):');
 print(allResults);
 
-// Map hasil gabungan ke dalam format yang diinginkan
 List<Map<String, dynamic>> dataScan = allResults.map((item) {
   return {
     "pono": item['pono'],
@@ -409,11 +407,9 @@ List<Map<String, dynamic>> dataScan = allResults.map((item) {
   };
 }).toList();
 
-// Cetak dataScan untuk melihat data yang akan dikirim
 print('Data yang akan dikirim ke API:');
 print(dataScan);
 
-// Buat body request dengan menggabungkan data
 final body = json.encode({
   "USERID": userId,
   "MACHINECD": device_name,
@@ -459,28 +455,61 @@ print(noitemScannedResults);
 
   }
 
+  Map<String, List<Map<String, dynamic>>> groupSummaryByPONumber(List<Map<String, dynamic>> summary) {
+  final Map<String, List<Map<String, dynamic>>> groupedSummary = {};
+
+  for (var item in summary) {
+    String pono = item['pono'];
+    if (!groupedSummary.containsKey(pono)) {
+      groupedSummary[pono] = [];
+    }
+    groupedSummary[pono]!.add(item);
+  }
+
+  return groupedSummary;
+}
+
   Widget buildRecentPOSummary() {
-    int grandTotal = recentPOSummary.fold(0, (int sum, detail) {
+    final groupedSummary = groupSummaryByPONumber(recentPOSummary);
+    final groupedSummary1 = groupSummaryByPONumber(recentMasterPOSummary);
+    final groupedSummary2 = groupSummaryByPONumber(recentNoPOSummary);
+ 
+ int grandTotal = 0; // Initialize grandTotal to 0
+
+if (groupedSummary.containsKey(widget.poNumber)) {
+  // Only proceed if the key exists
+  grandTotal = groupedSummary[widget.poNumber]!.fold(0, (int sum, detail) {
+    return sum + (detail['totalscan'] as int? ?? 0);
+  });
+} else {
+  // Optionally handle the case where the key does not exist
+  print('PO number ${widget.poNumber} not found in groupedSummary.');
+}
+
+ int calculateGrandTotal() {
+ 
+  int totalMaster = 0;
+  int totalNoPO = 0;
+
+  if (groupedSummary1.containsKey(widget.poNumber)) {
+    totalMaster = groupedSummary1[widget.poNumber]!.fold(0, (sum, detail) {
       return sum + (detail['totalscan'] as int? ?? 0);
     });
-    int calculateGrandTotal() {
-      int totalMaster = recentMasterPOSummary.fold(0, (sum, detail) {
-        return sum + (detail['totalscan'] as int? ?? 0);
-      });
+  }
 
-      int totalNoPO = recentNoPOSummary.fold(0, (sum, detail) {
-        return sum + (detail['totalscan'] as int? ?? 0);
-      });
+  if (groupedSummary2.containsKey(widget.poNumber)) {
+    totalNoPO = groupedSummary2[widget.poNumber]!.fold(0, (sum, detail) {
+      return sum + (detail['totalscan'] as int? ?? 0);
+    });
+  }
 
-      return totalMaster + totalNoPO;  
-    }
+  return totalMaster + totalNoPO;  
+}
 
-
-    return Column(
-  crossAxisAlignment: CrossAxisAlignment.start, 
-  children: [
-  
-    Padding(
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+       Padding(
       padding: const EdgeInsets.all(8.0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,  
@@ -496,6 +525,7 @@ print(noitemScannedResults);
           Text(
             grandTotal.toString(),
             style: const TextStyle(
+              
               fontWeight: FontWeight.bold,
               fontSize: 16,
             ),
@@ -503,8 +533,6 @@ print(noitemScannedResults);
           
         ],
       ),
-      
-      
     ),
   Padding(
       padding: const EdgeInsets.all(8.0),
@@ -513,7 +541,7 @@ print(noitemScannedResults);
         children: [
           
           const Text(
-            'Grand Total Unrecognize : ',
+            'Grand Total Unrecognize',
             style: TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 16,
@@ -522,113 +550,115 @@ print(noitemScannedResults);
            Text(
              calculateGrandTotal().toString(),
             style: const TextStyle(
+              color: Colors.red,
               fontWeight: FontWeight.bold,
               fontSize: 16,
             ),
           ),
         ],
       ),
-      
-      
+        
     ),
-    // PO Summary
-    Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: Text(
-        'PO Summary',
-        style: const TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.bold,
+      Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Text(
+          'PO Summary',
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ),
-    ),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: DataTable(
-            columns: const [
-              DataColumn(label: Text('Item SKU')),
-              DataColumn(label: Text('Item Name')),
-              DataColumn(label: Text('Barcode')),
-              DataColumn(label: Text('VendorBarcode')),
-              DataColumn(label: Text('Total Scanned')),
-            ],
-            rows: [
-              ...recentPOSummary.reversed.map((detail) {
+      SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: DataTable(
+          columns: const [
+            DataColumn(label: Text('PO NO')),
+            DataColumn(label: Text('Item SKU')),
+            DataColumn(label: Text('Item Name')),
+            DataColumn(label: Text('Barcode')),
+            DataColumn(label: Text('VendorBarcode')),
+            DataColumn(label: Text('Total Scanned')),
+          ],
+           rows: [
+  // Check if the key exists in groupedSummary before accessing it
+  if (groupedSummary.containsKey(widget.poNumber)) ...groupedSummary[widget.poNumber]!.reversed.map((detail) {
+    return DataRow(cells: [
+                DataCell(Text(detail['pono'] ?? '')),
+                DataCell(Text(detail['item_sku'] ?? '')),
+                DataCell(Text(detail['item_name'] ?? '')),
+                DataCell(Text(detail['barcode'] ?? '')),
+                DataCell(Text(detail['vendorbarcode'] ?? '')),
+                DataCell(Text(detail['totalscan'].toString())),
+              ]);
+            }).toList(),
+           
+          ],
+        ),
+      ),
+    ],
+  );
+}
+Widget buildRecentNoPOSummary() {
+  final groupedSummary1 = groupSummaryByPONumber(recentMasterPOSummary);
+  final groupedSummary2 = groupSummaryByPONumber(recentNoPOSummary);
+
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Text(
+          'Unrecognized Summary',
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+      SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: DataTable(
+          columns: const [
+            DataColumn(label: Text('PO NO')),
+            DataColumn(label: Text('Item SKU')),
+            DataColumn(label: Text('Item Name')),
+            DataColumn(label: Text('Barcode')),
+            DataColumn(label: Text('Vendor Barcode')),
+            DataColumn(label: Text('Total Scanned')),
+          ],
+          rows: [
+            // Check if groupedSummary1 contains widget.poNumber
+            if (groupedSummary1.containsKey(widget.poNumber))
+              ...groupedSummary1[widget.poNumber]!.reversed.map((detail) {
                 return DataRow(cells: [
+                  DataCell(Text(detail['pono'] ?? '')),
                   DataCell(Text(detail['item_sku'] ?? '')),
                   DataCell(Text(detail['item_name'] ?? '')),
                   DataCell(Text(detail['barcode'] ?? '')),
                   DataCell(Text(detail['vendorbarcode'] ?? '')),
-                  DataCell(Text(detail['totalscan'].toString())),
+                  DataCell(Text(detail['totalscan']?.toString() ?? '0')),
                 ]);
               }).toList(),
-              // Add a row for the grand total
-            
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-   Widget buildRecentMasterPOSummary() {
-
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Text(
-            'Unrecognize Summary',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: DataTable(
-            columns: const [
-              DataColumn(label: Text('Item SKU')),
-              DataColumn(label: Text('Item Name')),
-              DataColumn(label: Text('Barcode')),
-            DataColumn(label: Text('VendorBarcode')),
-              DataColumn(label: Text('Total Scanned')),
-            ],
-            rows: [
-                                  ...recentMasterPOSummary.reversed.map(
-                                        (detail) => DataRow(
-                                      cells: [
+            // Check if groupedSummary2 contains widget.poNumber
+            if (groupedSummary2.containsKey(widget.poNumber))
+              ...groupedSummary2[widget.poNumber]!.reversed.map((detail) {
+                return DataRow(cells: [
+                  DataCell(Text(detail['pono'] ?? '')),
                   DataCell(Text(detail['item_sku'] ?? '')),
                   DataCell(Text(detail['item_name'] ?? '')),
                   DataCell(Text(detail['barcode'] ?? '')),
                   DataCell(Text(detail['vendorbarcode'] ?? '')),
-                  DataCell(Text(detail['totalscan'].toString())),
-
-                                      ],
-                                    ),
-                                  ),
-                                  
-                                  ...recentNoPOSummary.reversed.map(
-                                        (detail) => DataRow(
-                                      cells: [
-                  DataCell(Text(detail['item_sku'] ?? '')),
-                  DataCell(Text(detail['item_name'] ?? '')),
-                  DataCell(Text(detail['barcode'] ?? '')),
-                  DataCell(Text(detail['vendorbarcode'] ?? '')),
-                  DataCell(Text(detail['totalscan'].toString())),
-                                      ],
-                                    ),
-                                  ),
-            
-            ],
-          ),
+                  DataCell(Text(detail['totalscan']?.toString() ?? '0')),
+                ]);
+              }).toList(),
+          ],
         ),
-      ],
-    );
-  }
+      ),
+    ],
+  );
+}
+
 
 
   @override
@@ -648,7 +678,7 @@ print(noitemScannedResults);
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             buildRecentPOSummary(),
-            buildRecentMasterPOSummary(),
+            buildRecentNoPOSummary(),
   //  SingleChildScrollView(
   //                 scrollDirection: Axis.vertical,
   //                 child: Column(

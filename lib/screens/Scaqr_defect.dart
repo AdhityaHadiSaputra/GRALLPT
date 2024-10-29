@@ -197,10 +197,12 @@ class _ScanQRDefectPageState extends State<ScanQRDefectPage> {
     String poNumber = _poNumberController.text.trim();
 
     if (poNumber.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Please search for a PO before submitting data')),
-      );
+      Flushbar(
+        message: 'Please search for a PO before submitting data',
+        duration: Duration(seconds: 3),
+        flushbarPosition: FlushbarPosition.TOP,
+        backgroundColor: Colors.red,
+    ).show(context);
       return;
     }
 
@@ -238,7 +240,7 @@ class _ScanQRDefectPageState extends State<ScanQRDefectPage> {
       await dbHelper.insertOrUpdatePO(poData);
     }
     Flushbar(
-      message: 'Po Data Save',
+      message: 'Scanned Berhasil',
       duration: Duration(seconds: 3),
       flushbarPosition: FlushbarPosition.TOP,
       backgroundColor: Colors.green,
@@ -511,9 +513,12 @@ Future<void> updateScannedQty(Map<String, dynamic> item) async {
           result); // Assuming you have a method for this
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Scanned results saved successfully')),
-    );
+    Flushbar(
+        message: 'Scanned Berhasil',
+        duration: Duration(seconds: 3),
+        flushbarPosition: FlushbarPosition.TOP,
+        backgroundColor: Colors.green,
+    ).show(context);
   }
   Future<void> submitMasterResults() async {
     final allPOs = [...masterScannedResults];
@@ -522,9 +527,12 @@ Future<void> updateScannedQty(Map<String, dynamic> item) async {
           result); // Assuming you have a method for this
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Scanned results saved successfully')),
-    );
+    Flushbar(
+        message: 'Scanned Berhasil',
+        duration: Duration(seconds: 3),
+        flushbarPosition: FlushbarPosition.TOP,
+        backgroundColor: Colors.green,
+    ).show(context);
   }
   Future<void> submitNoResults() async {
     final allPOs = [...noitemScannedResults];
@@ -533,9 +541,12 @@ Future<void> updateScannedQty(Map<String, dynamic> item) async {
           result); // Assuming you have a method for this
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Scanned results saved successfully')),
-    );
+  Flushbar(
+        message: 'Scanned Berhasil',
+        duration: Duration(seconds: 3),
+        flushbarPosition: FlushbarPosition.TOP,
+        backgroundColor: Colors.green,
+    ).show(context);
   }
 
   Future<Map<String, dynamic>?> fetchMasterItem(String scannedCode) async {
