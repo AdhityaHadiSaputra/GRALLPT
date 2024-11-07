@@ -538,7 +538,7 @@ Widget buildRecentNoPOSummary() {
                     Center(
                       child: ElevatedButton(
                         onPressed: submitScannedResults,
-                        child: Text('Submit Results'),
+                        child: const Text('Submit Results'),
                       ),
                       
                     ),

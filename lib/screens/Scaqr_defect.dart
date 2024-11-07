@@ -900,6 +900,7 @@ Future<void> updatePO(Map<String, dynamic> item) async {
               text: mutableResult['qty_scanned'].toString(),
             );
       return DataRow(
+      color: MaterialStateProperty.all(Colors.orange[200]),
       cells: [
         DataCell(Text(mutableResult['pono'] ?? '')),
         DataCell(Text(mutableResult['item_sku'] ?? '')),
@@ -966,6 +967,8 @@ Future<void> updatePO(Map<String, dynamic> item) async {
             );
 
       return DataRow(
+      color: MaterialStateProperty.all(Colors.red[200]),
+
       cells: [
         DataCell(Text(mutableResult['pono'] ?? '')),
         DataCell(Text(mutableResult['item_sku'] ?? '')),

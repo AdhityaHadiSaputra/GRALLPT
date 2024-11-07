@@ -59,10 +59,7 @@ class _MasterItemPageState extends State<MasterItemPage> {
         SnackBar(content: Text('All items cleared successfully')),
       );
     } catch (e) {
-      print(e); // Log the actual error
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error clearing items: ${e.toString()}')),
-      );
+     
     }
   }
 

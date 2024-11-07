@@ -893,6 +893,7 @@ int calculateTotalQtyScanned() {
             );
 
       return DataRow(
+      color: MaterialStateProperty.all(Colors.orange[100]),
       cells: [
         DataCell(Text(mutableResult['pono'] ?? '')),
         DataCell(Text(mutableResult['item_sku'] ?? '')),
@@ -957,6 +958,7 @@ int calculateTotalQtyScanned() {
               text: mutableResult['qty_scanned'].toString(),
             );
       return DataRow(
+      color: MaterialStateProperty.all(Colors.red[200]),
       cells: [
         DataCell(Text(mutableResult['pono'] ?? '')),
         DataCell(Text(mutableResult['item_sku'] ?? '')),
