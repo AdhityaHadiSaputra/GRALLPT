@@ -268,20 +268,39 @@ class _ScanQRPageState extends State<ScanQRPage> {
     });
   }
 
+Future<void> deleteRowByScandate(String pono, String scandate, String item_name) async {
+  await dbHelper.deleteScan(pono, scandate, item_name); // Backend call
+
+  setState(() {
+    // Remove the item from the list locally
+    scannedResults.removeWhere(
+      (result) => result['pono'] == pono && result['scandate'] == scandate && result['item_name'] == item_name,
+    );
+
+    Flushbar(
+      message: 'Row deleted successfully!',
+      duration: Duration(seconds: 3),
+      flushbarPosition: FlushbarPosition.TOP,
+      backgroundColor: Colors.green,
+    ).show(context);
+  });
+}
+
+
 Future<void> checkAndSumQty(String scannedCode) async {
   int totalQtyScanned = calculateTotalQtyScanned(); // Get the total scanned quantity
 
   // Check if total scanned quantity has reached or exceeded 500
-  if (totalQtyScanned >= 500) {
-    // Display an error message and prevent further scanning
-    Flushbar(
-      message: 'You cannot scan more than 500 items!',
-      duration: Duration(seconds: 3),
-      flushbarPosition: FlushbarPosition.TOP,
-      backgroundColor: Colors.red,
-    ).show(context);
-    return; // Stop further processing if limit is reached
-  }
+  // if (totalQtyScanned >= 5000) {
+  //   // Display an error message and prevent further scanning
+  //   Flushbar(
+  //     message: 'You cannot scan more than 5000 items!',
+  //     duration: Duration(seconds: 3),
+  //     flushbarPosition: FlushbarPosition.TOP,
+  //     backgroundColor: Colors.red,
+  //   ).show(context);
+  //   return; // Stop further processing if limit is reached
+  // }
 
   final deviceInfoPlugin = DeviceInfoPlugin();
   String deviceName = '';
@@ -788,100 +807,133 @@ int calculateTotalQtyScanned() {
                                       fontSize: 18,
                                       fontWeight: FontWeight.bold),
                                 ),
-                                Expanded(
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: SingleChildScrollView(
-            controller: ScrollController(),
-            child: DataTable(
-              columns: const [
-               
-                DataColumn(label: Text('PO Number')),
-                DataColumn(label: Text('Item SKU')),
-                DataColumn(label: Text('Item Name')),
-                DataColumn(label: Text('Barcode')),
-                DataColumn(label: Text('VendorBarcode')),
-                DataColumn(label: Text('Qty Scanned')),
-                DataColumn(label: Text('User')),
-                DataColumn(label: Text('Device')),
-                DataColumn(label: Text('QTY Koli')),
-                DataColumn(label: Text('Timestamp')),
-                
+    Expanded(
+    child: SingleChildScrollView(
+    scrollDirection: Axis.horizontal,
+    child: SingleChildScrollView(
+    controller: ScrollController(),
+    child: DataTable(
+    columns: const [
+    DataColumn(label: Text('PO Number')),
+    DataColumn(label: Text('Item SKU')),
+    DataColumn(label: Text('Item Name')),
+    DataColumn(label: Text('Barcode')),
+    DataColumn(label: Text('VendorBarcode')),
+    DataColumn(label: Text('Qty Scanned')),
+    // DataColumn(label: Text('User')),
+    // DataColumn(label: Text('Device')),
+    DataColumn(label: Text('QTY Koli')),
+    DataColumn(label: Text('Timestamp')),
+    DataColumn(label: Text('Actions')),
 
-             
-              ],
-              rows: [
+    ],
+    rows: [
   ...scannedResults.asMap().entries.map(
-          (entry) {
-       int index = entry.key;
-            Map<String, dynamic> result = entry.value;
-            Map<String, dynamic> mutableResult = Map.from(result);
+    (entry) {
+      int index = entry.key;
+      Map<String, dynamic> result = Map<String, dynamic>.from(entry.value); // Deep copy
 
-            
-            _controllers[index] ??= TextEditingController(
-              text: mutableResult['qty_scanned'].toString(),
-            );
+      // Initialize the controller if not already present
+      _controllers[index] ??= TextEditingController();
+
+      // Update the controller text to match the current qty_scanned
+      _controllers[index]!.text = result['qty_scanned']?.toString() ?? '0';
 
       return DataRow(
-      cells: [
-        DataCell(Text(mutableResult['pono'] ?? '')),
-        DataCell(Text(mutableResult['item_sku'] ?? '')),
-        DataCell(Text(mutableResult['item_name'] ?? '')),
-        DataCell(Text(mutableResult['barcode'] ?? '')),
-        DataCell(Text(mutableResult['vendorbarcode'] ?? '')),
-       DataCell(
-                  TextFormField(
-                    controller: _controllers[index], // Use controller for each field
-                    keyboardType: TextInputType.number,
-                    onFieldSubmitted: (newValue) {
-                      int? updatedQty = int.tryParse(newValue);
+        cells: [
+          DataCell(Text(result['pono'] ?? '')),
+          DataCell(Text(result['item_sku'] ?? '')),
+          DataCell(Text(result['item_name'] ?? '')),
+          DataCell(Text(result['barcode'] ?? '')),
+          DataCell(Text(result['vendorbarcode'] ?? '')),
+          DataCell(
+            TextFormField(
+              controller: _controllers[index],
+              keyboardType: TextInputType.number,
+              onFieldSubmitted: (newValue) {
+                int? updatedQty = int.tryParse(newValue);
 
-                      // Ensure the value is not less than 1
-                      if (updatedQty != null && updatedQty >= 1) {
-                        setState(() {
-                          mutableResult['qty_scanned'] = updatedQty;
-                          scannedResults[index] = mutableResult;
+                // Ensure the value is not less than 1
+                if (updatedQty != null && updatedQty >= 1) {
+                  setState(() {
+                    // Update the quantity directly in `scannedResults`
+                    result['qty_scanned'] = updatedQty;
+                    scannedResults[index] = result;
 
-                          // Optional: Update backend with new quantity
-                          submitScannedResults();
-                          submitScannedMasterItemsResults();
-                          submitScannedNoItemsResults();
+                    // Optional: Update backend with new quantity
+                    submitScannedResults();
+                    submitScannedMasterItemsResults();
+                    submitScannedNoItemsResults();
 
-                          Flushbar(
-                            message: 'Quantity updated successfully!',
-                            duration: Duration(seconds: 5),
-                            flushbarPosition: FlushbarPosition.TOP,
-                            backgroundColor: Colors.green,
-                          ).show(context);
-                        });
-                      } else {
-                        // Show a warning if the value is below 1
-                        Flushbar(
-                          message: 'Quantity must be 1 or greater!',
-                          duration: Duration(seconds: 3),
-                          flushbarPosition: FlushbarPosition.TOP,
-                          backgroundColor: Colors.red,
-                        ).show(context);
+                    Flushbar(
+                      message: 'Quantity updated successfully!',
+                      duration: Duration(seconds: 5),
+                      flushbarPosition: FlushbarPosition.TOP,
+                      backgroundColor: Colors.green,
+                    ).show(context);
+                  });
+                } else {
+                  // Show a warning if the value is below 1
+                  Flushbar(
+                    message: 'Quantity must be 1 or greater!',
+                    duration: Duration(seconds: 3),
+                    flushbarPosition: FlushbarPosition.TOP,
+                    backgroundColor: Colors.red,
+                  ).show(context);
 
-                        // Revert the text field to the last valid value
-                        _controllers[index]?.text = mutableResult['qty_scanned'].toString();
-                      }
-                    },
-                  ),
-                ),
+                  // Revert the text field to the last valid value
+                  _controllers[index]!.text = result['qty_scanned'].toString();
+                }
+              },
+            ),
+          ),
+          // DataCell(Text(result['user'] ?? '')),
+          // DataCell(Text(result['device_name'] ?? '')),
+          DataCell(Text(result['qty_koli']?.toString() ?? '0')),
+          DataCell(Text(result['scandate'] ?? '')),
 
-
-        DataCell(Text(mutableResult['user'] ?? '')),
-        DataCell(Text(mutableResult['device_name'] ?? '')),
-        DataCell(Text(mutableResult['qty_koli'].toString())),
-        DataCell(Text(mutableResult['scandate'] ?? '')),
-      ],
-    );
-
-
+          // Delete action button
+          DataCell(
+  IconButton(
+    icon: Icon(Icons.delete, color: Colors.red),
+    onPressed: () {
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text('Yakin ingin menghapus?'),
+            content: Text('Apakah Anda yakin ingin menghapus data: ${result['item_name']}?'),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop(); // Close the dialog
+                },
+                child: Text('Batal'),
+              ),
+              TextButton(
+                onPressed: () {
+                  // Call the delete function if user confirms
+                  deleteRowByScandate(result['pono'], result['scandate'], result['item_name']);
+                  Navigator.of(context).pop(); // Close the dialog
+                },
+                child: Text('Hapus', style: TextStyle(color: Colors.red)),
+              ),
+            ],
+          );
+        },
+      );
     },
   ),
-  ...differentScannedResults.asMap().entries.map(
+),
+
+
+            ],
+    );
+    },
+  ),
+
+
+    ...differentScannedResults.asMap().entries.map(
           (entry) {
        int index = entry.key;
             Map<String, dynamic> result = entry.value;
@@ -939,10 +991,44 @@ int calculateTotalQtyScanned() {
                     },
                   ),
                 ),
-        DataCell(Text(mutableResult['user'] ?? '')),
-        DataCell(Text(mutableResult['device_name'] ?? '')),
+        // DataCell(Text(mutableResult['user'] ?? '')),
+        // DataCell(Text(mutableResult['device_name'] ?? '')),
         DataCell(Text(mutableResult['qty_koli'].toString())),
         DataCell(Text(mutableResult['scandate'] ?? '')),
+        DataCell(
+  IconButton(
+    icon: Icon(Icons.delete, color: Colors.red),
+    onPressed: () {
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text('Yakin ingin menghapus?'),
+            content: Text('Apakah Anda yakin ingin menghapus data: ${result['item_name']}?'),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop(); // Close the dialog
+                },
+                child: Text('Batal'),
+              ),
+              TextButton(
+                onPressed: () {
+                  // Call the delete function if user confirms
+                  deleteRowByScandate(result['pono'], result['scandate'], result['item_name']);
+                  Navigator.of(context).pop(); // Close the dialog
+                },
+                child: Text('Hapus', style: TextStyle(color: Colors.red)),
+              ),
+            ],
+          );
+        },
+      );
+    },
+  ),
+),
+
+
       ],
     );
     },
@@ -1005,10 +1091,44 @@ int calculateTotalQtyScanned() {
                     },
                   ),
                 ),
-        DataCell(Text(mutableResult['user'] ?? '')),
-        DataCell(Text(mutableResult['device_name'] ?? '')),
+        // DataCell(Text(mutableResult['user'] ?? '')),
+        // DataCell(Text(mutableResult['device_name'] ?? '')),
         DataCell(Text(mutableResult['qty_koli'].toString())),
         DataCell(Text(mutableResult['scandate'] ?? '')),
+        DataCell(
+  IconButton(
+    icon: Icon(Icons.delete, color: Colors.red),
+    onPressed: () {
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text('Yakin ingin menghapus?'),
+            content: Text('Apakah Anda yakin ingin menghapus data: ${result['item_name']}?'),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop(); // Close the dialog
+                },
+                child: Text('Batal'),
+              ),
+              TextButton(
+                onPressed: () {
+                  // Call the delete function if user confirms
+                  deleteRowByScandate(result['pono'], result['scandate'], result['item_name']);
+                  Navigator.of(context).pop(); // Close the dialog
+                },
+                child: Text('Hapus', style: TextStyle(color: Colors.red)),
+              ),
+            ],
+          );
+        },
+      );
+    },
+  ),
+),
+
+
       ],
     );
     },

@@ -977,6 +977,15 @@ Future<List<Map<String, dynamic>>> getSummaryDefectMasterPOs(String userId) asyn
       whereArgs: [poNumber, scandate],
     );
   }
+
+  Future<void>  deleteScan(String poNumber,String scandate, String item_name ) async {
+    final db = await database;
+    await db.delete(
+      'scanned_results',
+      where: 'pono = ? AND scandate = ? AND item_name = ?',
+      whereArgs: [poNumber,scandate,item_name],
+    );
+  }
     Future<void>  deletePOMasterResult(String poNumber, String scandate) async {
     final db = await database;
     await db.delete(
