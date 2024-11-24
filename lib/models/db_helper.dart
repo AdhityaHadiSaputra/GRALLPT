@@ -51,6 +51,7 @@ class DatabaseHelper {
         CREATE TABLE po(
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           pono TEXT,
+          transno TEXT,
           item_sku TEXT,
           item_name TEXT,
           qty_po INTEGER,
@@ -68,6 +69,7 @@ class DatabaseHelper {
         '''
         CREATE TABLE scanned_results(
           id INTEGER PRIMARY KEY AUTOINCREMENT,
+          transno TEXT,
           pono TEXT,
           item_sku TEXT,
           item_name TEXT,
@@ -89,6 +91,7 @@ class DatabaseHelper {
         '''
         CREATE TABLE scanned_master(
           id INTEGER PRIMARY KEY AUTOINCREMENT,
+          transno TEXT,
           pono TEXT,
           item_sku TEXT,
           item_name TEXT,
@@ -110,6 +113,7 @@ class DatabaseHelper {
         '''
         CREATE TABLE noitems(
           id INTEGER PRIMARY KEY AUTOINCREMENT,
+          transno TEXT,
           pono TEXT,
           item_sku TEXT,
           item_name TEXT,
@@ -212,6 +216,10 @@ class DatabaseHelper {
         await db.execute(
           '''
           ALTER TABLE master_item ADD COLUMN vendorbarcode TEXT;
+          ALTER TABLE scanned_results ADD COLUMN transno TEXT;
+          ALTER TABLE scanned_master ADD COLUMN transno TEXT;
+          ALTER TABLE noitems ADD COLUMN transno TEXT;
+          ALTER TABLE po ADD COLUMN transno TEXT;
           ''',
         );
       }
@@ -344,16 +352,17 @@ class DatabaseHelper {
     final db = await database;
     return await db.query(
       'scanned_results',
-      where: 'pono = ? AND type = ?',
+      where: 'transno = ? AND type = ?',
       whereArgs: [poNumber, scannedPOType],
     );
   }
+  
     Future<List<Map<String, dynamic>>> getScannedMasterPODetails(
       String poNumber) async {
     final db = await database;
     return await db.query(
       'scanned_master',
-      where: 'pono = ? AND type = ?',
+      where: 'transno = ? AND type = ?',
       whereArgs: [poNumber, scannedPOType],
     );
   }
@@ -362,7 +371,7 @@ class DatabaseHelper {
     final db = await database;
     return await db.query(
       'noitems',
-      where: 'pono = ? AND type = ?',
+      where: 'transno = ? AND type = ?',
       whereArgs: [poNumber, scannedPOType],
     );
   }
@@ -424,32 +433,32 @@ class DatabaseHelper {
   }
 
   Future<bool> poScannedExists(
-      String poNumber, String barcode, String scandate, String vendorbarcode) async {
+      String poNumber, String transno, String barcode, String scandate, String vendorbarcode) async {
     final db = await database;
     final result = await db.query(
       'scanned_results',
-      where: 'pono = ? AND barcode = ? AND vendorbarcode = ? AND type = ? AND scandate = ?',
-      whereArgs: [poNumber, barcode, vendorbarcode, scannedPOType, scandate],
+      where: 'transno = ? AND pono = ? AND barcode = ? AND vendorbarcode = ? AND type = ? AND scandate = ?',
+      whereArgs: [transno, poNumber, barcode, vendorbarcode, scannedPOType, scandate],
     );
     return result.isNotEmpty;
   }
   Future<bool> poMasterScannedExists(
-      String poNumber, String barcode, String scandate, String vendorbarcode) async {
+      String poNumber,String transno, String barcode, String scandate, String vendorbarcode) async {
     final db = await database;
     final result = await db.query(
       'scanned_master',
-      where: 'pono = ? AND barcode = ? AND vendorbarcode = ? AND type = ? AND scandate = ?',
-      whereArgs: [poNumber, barcode, vendorbarcode, scannedPOType, scandate],
+      where: 'transno = ? AND pono = ? AND barcode = ? AND vendorbarcode = ? AND type = ? AND scandate = ?',
+      whereArgs: [transno, poNumber, barcode, vendorbarcode, scannedPOType, scandate],
     );
     return result.isNotEmpty;
   }
   Future<bool> poNoItemScannedExists(
-      String poNumber, String barcode, String scandate, String vendorbarcode) async {
+      String poNumber,String transno, String barcode, String scandate, String vendorbarcode) async {
     final db = await database;
     final result = await db.query(
       'noitems',
-      where: 'pono = ? AND barcode = ? AND vendorbarcode = ? AND type = ? AND scandate = ?',
-      whereArgs: [poNumber, barcode, vendorbarcode, scannedPOType, scandate],
+      where: 'transno = ? AND pono = ? AND barcode = ? AND vendorbarcode = ? AND type = ? AND scandate = ?',
+      whereArgs: [transno, poNumber, barcode, vendorbarcode, scannedPOType, scandate],
     );
     return result.isNotEmpty;
   }
@@ -494,8 +503,8 @@ class DatabaseHelper {
       int updateCount = await db.update(
         'scanned_results',
         poData,
-        where: 'pono = ? AND barcode = ? AND vendorbarcode = ? AND type = ? AND scandate = ?',
-        whereArgs: [poData['pono'], poData['barcode'], poData['vendorbarcode'], poData['type'], poData['scandate']],
+        where: 'transno = ? AND pono = ? AND barcode = ? AND vendorbarcode = ? AND type = ? AND scandate = ?',
+        whereArgs: [poData['transno'], poData['pono'], poData['barcode'], poData['vendorbarcode'], poData['type'], poData['scandate']],
       );
 
       // If no rows were updated, insert the new defect data
@@ -509,34 +518,7 @@ class DatabaseHelper {
     } catch (e) {
       print('Error inserting or updating data: $e');
     }
-    // final db = await database;
-
-    // bool exists = await poScannedExists(
-    //     poData['pono'], poData['barcode'], poData['vendorbarcode'], poData['scandate']);
-    // final mappedPOData = {...poData, "type": scannedPOType};
-    // // poData["type"] = scannedPOType;
-    // // await db.insert('scanned_results', poData);
-
-    // if (exists) {
-    //   await db.update(
-    //     'scanned_results',
-    //     mappedPOData,
-    //     where: 'pono = ? AND barcode = ? AND vendorbarcode = ? AND type = ? AND scandate = ?',
-    //     whereArgs: [
-    //       mappedPOData['pono'],
-    //       mappedPOData['barcode'],
-    //       mappedPOData['vendorbarcode'],
-    //       scannedPOType,
-    //       mappedPOData['scandate']
-    //     ],
-    //   );
-    //   print(
-    //       'CEKK PO updated: ${mappedPOData['pono']} - Barcode: ${mappedPOData['barcode']} - VendorBarcode: ${mappedPOData['vendorbarcode']} - Scandate: ${mappedPOData['scandate']}');
-    // } else {
-    //   await db.insert('scanned_results', mappedPOData);
-    //   print(
-    //       'CEKK PO inserted: ${mappedPOData['pono']} - Barcode: ${mappedPOData['barcode']} - VendorBarcode: ${mappedPOData['vendorbarcode']} - Scandate: ${mappedPOData['scandate']}');
-    // }
+   
   }
  
  Future<void> insertOrUpdateScannedMasterItemsResults(Map<String, dynamic> masterData) async {
@@ -547,8 +529,8 @@ class DatabaseHelper {
       int updateCount = await db.update(
         'scanned_master',
         masterData,
-        where: 'pono = ? AND barcode = ? AND vendorbarcode = ? AND type = ? AND scandate = ?',
-        whereArgs: [masterData['pono'], masterData['barcode'], masterData['vendorbarcode'], masterData['type'], masterData['scandate']],
+        where: 'transno = ? AND pono = ? AND barcode = ? AND vendorbarcode = ? AND type = ? AND scandate = ?',
+        whereArgs: [masterData['transno'], masterData['pono'], masterData['barcode'], masterData['vendorbarcode'], masterData['type'], masterData['scandate']],
       );
 
       // If no rows were updated, insert the new defect data
@@ -571,8 +553,8 @@ class DatabaseHelper {
       int updateCount = await db.update(
         'noitems',
         noItemsData,
-        where: 'pono = ? AND barcode = ? AND vendorbarcode = ? AND type = ? AND scandate = ?',
-        whereArgs: [noItemsData['pono'], noItemsData['barcode'], noItemsData['vendorbarcode'], noItemsData['type'], noItemsData['scandate']],
+        where: 'transno = ? AND pono = ? AND barcode = ? AND vendorbarcode = ? AND type = ? AND scandate = ?',
+        whereArgs: [noItemsData['transno'], noItemsData['pono'], noItemsData['barcode'], noItemsData['vendorbarcode'], noItemsData['type'], noItemsData['scandate']],
       );
       if (updateCount == 0) {
         await db.insert(
@@ -732,12 +714,12 @@ Future<void> clearMasterItems() async {
     }
   }
 
-  Future<bool> poExists(String poNumber, String barcode, String vendorbarcode) async {
+  Future<bool> poExists(String poNumber, String transNumber, String barcode, String vendorbarcode) async {
     final db = await database;
     final result = await db.query(
       'po',
-      where: 'pono = ? AND barcode = ? AND vendorbarcode = ? AND type = ? AND scandate = ?',
-      whereArgs: [poNumber, barcode, vendorbarcode, inputPOType],
+      where: 'pono = ? AND transno = ? AND barcode = ? AND vendorbarcode = ? AND type = ? AND scandate = ?',
+      whereArgs: [poNumber, transNumber, barcode, vendorbarcode, inputPOType],
     );
     return result.isNotEmpty;
   }
@@ -746,19 +728,19 @@ Future<void> clearMasterItems() async {
   Future<void> insertOrUpdatePO(Map<String, dynamic> poData) async {
     final db = await database;
 
-    bool exists = await poExists(poData['pono'], poData['barcode'], poData['vendorbarcode']);
+    bool exists = await poExists(poData['pono'], poData['transno'], poData['barcode'], poData['vendorbarcode']);
     poData["type"] = inputPOType;
     if (exists) {
       await db.update(
         'po',
         poData,
-        where: 'pono = ? AND barcode = ? AND vendorbarcode = ? AND type = ?',
-        whereArgs: [poData['pono'], poData['barcode'], poData['vendorbarcode'], inputPOType],
+        where: 'pono = ? AND transno = ? AND barcode = ? AND vendorbarcode = ? AND type = ?',
+        whereArgs: [poData['pono'], poData['transno'], poData['barcode'], poData['vendorbarcode'], inputPOType],
       );
-      print('PO updated: ${poData['pono']} - Barcode: ${poData['barcode']} - VendorBarcode: ${poData['vendorbarcode']}');
+      print('PO updated: ${poData['pono']} - Transno: ${poData['transno']} - Barcode: ${poData['barcode']} - VendorBarcode: ${poData['vendorbarcode']}');
     } else {
       await db.insert('po', poData);
-      print('PO inserted: ${poData['pono']} - Barcode: ${poData['barcode']} - VendorBarcode: ${poData['vendorbarcode']}');
+      print('PO inserted: ${poData['pono']} - Transno: ${poData['transno']} - Barcode: ${poData['barcode']} - VendorBarcode: ${poData['vendorbarcode']}');
     }
     
   }
@@ -778,38 +760,98 @@ Future<void> clearMasterItems() async {
     final db = await database;
     return await db.query(
       'po',
-      where: 'pono = ? AND type = ?',
+      where: 'transno = ? AND type = ?',
       whereArgs: [poNumber, inputPOType],
     );
   }
 
+  // Future<List<Map<String, dynamic>>> getPOScannedODetails(
+  //     String poNumber) async {
+  //   final db = await database;
+  //   return await db.query(
+  //     'scanned_results',
+  //     where: 'pono = ?',
+  //     whereArgs: [poNumber],
+  //   );
+  // }
+  // Future<List<Map<String, dynamic>>> getPOMasterScannedODetails(
+  //     String poNumber) async {
+  //   final db = await database;
+  //   return await db.query(
+  //     'scanned_master',
+  //     where: 'pono = ?',
+  //     whereArgs: [poNumber],
+  //   );
+  // }
+  // Future<List<Map<String, dynamic>>> getNoitemScannedODetails(
+  //     String poNumber) async {
+  //   final db = await database;
+  //   return await db.query(
+  //     'noitems',
+  //     where: 'pono = ?',
+  //     whereArgs: [poNumber],
+  //   );
+  // }
   Future<List<Map<String, dynamic>>> getPOScannedODetails(
-      String poNumber) async {
-    final db = await database;
-    return await db.query(
-      'scanned_results',
-      where: 'pono = ?',
-      whereArgs: [poNumber],
-    );
-  }
-  Future<List<Map<String, dynamic>>> getPOMasterScannedODetails(
-      String poNumber) async {
-    final db = await database;
-    return await db.query(
-      'scanned_master',
-      where: 'pono = ?',
-      whereArgs: [poNumber],
-    );
-  }
-  Future<List<Map<String, dynamic>>> getNoitemScannedODetails(
-      String poNumber) async {
-    final db = await database;
-    return await db.query(
-      'noitems',
-      where: 'pono = ?',
-      whereArgs: [poNumber],
-    );
-  }
+    String poNumber, String transNumber) async {
+  final db = await database;
+  return await db.query(
+    'scanned_results',
+    where: 'pono = ? AND transno = ?', // Menambahkan kondisi untuk transno
+    whereArgs: [poNumber, transNumber], // Menambahkan transno ke whereArgs
+  );
+}
+
+Future<List<Map<String, dynamic>>> getPOMasterScannedODetails(
+    String poNumber, String transNumber) async {
+  final db = await database;
+  return await db.query(
+    'scanned_master',
+    where: 'pono = ? AND transno = ?', // Menambahkan kondisi untuk transno
+    whereArgs: [poNumber, transNumber], // Menambahkan transno ke whereArgs
+  );
+}
+
+Future<List<Map<String, dynamic>>> getNoitemScannedODetails(
+    String poNumber, String transNumber) async {
+  final db = await database;
+  return await db.query(
+    'noitems',
+    where: 'pono = ? AND transno = ?', // Menambahkan kondisi untuk transno
+    whereArgs: [poNumber, transNumber], // Menambahkan transno ke whereArgs
+  );
+}
+
+ Future<List<Map<String, dynamic>>> getPOScannedODetails1(
+    String poNumber, String transNumber) async {
+  final db = await database;
+  return await db.query(
+    'scanned_results',
+    where: 'transno = ? AND transno = ?', // Menambahkan kondisi untuk transno
+    whereArgs: [poNumber, transNumber], // Menambahkan transno ke whereArgs
+  );
+}
+
+Future<List<Map<String, dynamic>>> getPOMasterScannedODetails1(
+    String poNumber, String transNumber) async {
+  final db = await database;
+  return await db.query(
+    'scanned_master',
+    where: 'pono = ? AND transno = ?', // Menambahkan kondisi untuk transno
+    whereArgs: [poNumber, transNumber], // Menambahkan transno ke whereArgs
+  );
+}
+
+Future<List<Map<String, dynamic>>> getNoitemScannedODetails1(
+    String poNumber, String transNumber) async {
+  final db = await database;
+  return await db.query(
+    'noitems',
+    where: 'pono = ? AND transno = ?', // Menambahkan kondisi untuk transno
+    whereArgs: [poNumber, transNumber], // Menambahkan transno ke whereArgs
+  );
+}
+
   Future<List<Map<String, dynamic>>> getPODefectScannedODetails(
       String poNumber) async {
     final db = await database;
@@ -840,8 +882,8 @@ Future<void> clearMasterItems() async {
 
 
   Future<List<Map<String, dynamic>>> getPOResultScannedDetails(
-      String poNumber) async {
-    final poDetails = await getPOScannedODetails(poNumber);
+      String poNumber, String transno) async {
+    final poDetails = await getPOScannedODetails(poNumber, transno);
     final resultScanned =
         poDetails.where((e) => e['status'] == 'scanned').toList();
           print("CEK Scanned SCANNED $resultScanned");
@@ -851,8 +893,8 @@ Future<void> clearMasterItems() async {
   }
 
   Future<List<Map<String, dynamic>>> getPODifferentScannedDetails(
-      String poNumber) async {
-    final poDetails = await getPOMasterScannedODetails(poNumber);
+      String poNumber, String transno) async {
+    final poDetails = await getPOMasterScannedODetails(poNumber, transno);
     final differentScanned =
         poDetails.where((e) => e['status'] == 'different').toList();
     print("CEK Different SCANNED $differentScanned");
@@ -860,8 +902,8 @@ Future<void> clearMasterItems() async {
   }
 
   Future<List<Map<String, dynamic>>> getPONOItemsScannedDetails(
-      String poNumber) async {
-    final poDetails = await getNoitemScannedODetails(poNumber);
+      String poNumber, String transno) async {
+    final poDetails = await getNoitemScannedODetails(poNumber, transno);
     final noitemScanned =
         poDetails.where((e) => e['status'] == 'noitem').toList();
     print("CEK No Item SCANNED $noitemScanned");
@@ -905,23 +947,23 @@ Future<void> clearMasterItems() async {
 Future<List<Map<String, dynamic>>> getSummaryRecentPOs(String userId) async {
   final db = await database;
   final query = '''
-    SELECT pono, item_sku, item_name, barcode, vendorbarcode, SUM(qty_scanned) AS totalscan
+    SELECT transno, pono, item_sku, item_name, barcode, vendorbarcode, SUM(qty_scanned) AS totalscan
     FROM scanned_results 
     WHERE user = ? 
-    GROUP BY pono, item_sku, item_name, barcode, vendorbarcode
+    GROUP BY transno, pono, item_sku, item_name, barcode, vendorbarcode
   ''';
   return await db.rawQuery(query, [userId]);
 }
 
  Future<List<Map<String, dynamic>>> getSummaryMasterRecentPOs(String userId) async {
   final db = await database;
-  final query = 'SELECT pono, item_sku, item_name, barcode, vendorbarcode, SUM(qty_scanned) as totalscan FROM scanned_master WHERE user = ? GROUP BY pono, item_sku, item_name, barcode';
+  final query = 'SELECT transno, pono, item_sku, item_name, barcode, vendorbarcode, SUM(qty_scanned) as totalscan FROM scanned_master WHERE user = ? GROUP BY transno, pono, item_sku, item_name, barcode';
   return await db.rawQuery(query, [userId]); 
 }
    Future<List<Map<String, dynamic>>> getSummaryRecentNoPO(String userId) async {
     final db = await database;
     final query = 
-        'SELECT pono, item_sku, item_name, barcode, vendorbarcode, SUM(qty_scanned) as totalscan FROM noitems WHERE user = ? GROUP BY pono, item_sku, item_name, barcode';
+        'SELECT transno, pono, item_sku, item_name, barcode, vendorbarcode, SUM(qty_scanned) as totalscan FROM noitems WHERE user = ? GROUP BY transno, pono, item_sku, item_name, barcode';
     return await db.rawQuery(query, [userId]); 
   }
   Future<List<Map<String, dynamic>>> getSummaryDefecttPOs(String userId) async {
@@ -966,6 +1008,14 @@ Future<List<Map<String, dynamic>>> getSummaryDefectMasterPOs(String userId) asyn
       whereArgs: [poNumber, inputPOType],
     );
   }
+   Future<void> deletePO1(String poNumber) async {
+    final db = await database;
+    await db.delete(
+      'po',
+      where: 'transno = ? AND type = ?',
+      whereArgs: [poNumber, inputPOType],
+    );
+  }
 
 
 
@@ -982,6 +1032,24 @@ Future<List<Map<String, dynamic>>> getSummaryDefectMasterPOs(String userId) asyn
     final db = await database;
     await db.delete(
       'scanned_results',
+      where: 'pono = ? AND scandate = ? AND item_name = ?',
+      whereArgs: [poNumber,scandate,item_name],
+    );
+  }
+  
+  Future<void>  deleteScanMaster(String poNumber,String scandate, String item_name ) async {
+    final db = await database;
+    await db.delete(
+      'scanned_master',
+      where: 'pono = ? AND scandate = ? AND item_name = ?',
+      whereArgs: [poNumber,scandate,item_name],
+    );
+  }
+  
+  Future<void>  deleteScanNoItems(String poNumber,String scandate, String item_name ) async {
+    final db = await database;
+    await db.delete(
+      'noitems',
       where: 'pono = ? AND scandate = ? AND item_name = ?',
       whereArgs: [poNumber,scandate,item_name],
     );
@@ -1061,6 +1129,33 @@ Future<void> deletePOScannedDifferentResult(String poNumber) async {
       whereArgs: [poNumber, scannedPOType],
     );
   }
+
+Future<void> deletePOScannedDifferentResult1(String poNumber) async {
+    final db = await database;
+    await db.delete(
+      'scanned_results',
+      where: 'transno = ? AND type = ?',
+      whereArgs: [poNumber, scannedPOType],
+    );
+  }
+  Future<void> deletePOScannedMasterResult1(String poNumber) async {
+    final db = await database;
+    await db.delete(
+      'scanned_master',
+      where: 'transno = ? AND type = ?',
+      whereArgs: [poNumber, scannedPOType],
+    );
+  }
+    Future<void> deletePOScannedNoItemsResult1(String poNumber) async {
+    final db = await database;
+    await db.delete(
+      'noitems',
+      where: 'transno = ? AND type = ?',
+      whereArgs: [poNumber, scannedPOType],
+    );
+  }
+
+
   Future<void> deletePOScannedDefectResult(String poNumber) async {
     final db = await database;
     await db.delete(

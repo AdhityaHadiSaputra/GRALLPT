@@ -2,7 +2,7 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get_utils/src/platform/platform.dart';
-// import 'package:intl/intl.dart';
+import 'package:intl/intl.dart';
 import 'package:grmobileallpt/api_service.dart';
 import 'package:grmobileallpt/models/db_helper.dart';
 import 'package:http/http.dart' as http;
@@ -13,9 +13,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class PODetailPage extends StatefulWidget {
   final String poNumber;
+  final String transNumber;
   
 
-  PODetailPage({required this.poNumber});
+  PODetailPage({required this.poNumber,required this.transNumber});
 
   @override
   _PODetailPageState createState() => _PODetailPageState();
@@ -62,9 +63,14 @@ class _PODetailPageState extends State<PODetailPage> {
   });
 
   try {
-    final List<Map<String, dynamic>> details = await dbHelper.getPOScannedODetails(widget.poNumber);
-    final List<Map<String, dynamic>> details1 = await dbHelper.getPOMasterScannedODetails(widget.poNumber);
-    final List<Map<String, dynamic>> details2 = await dbHelper.getNoitemScannedODetails(widget.poNumber);
+    
+    final List<Map<String, dynamic>> details = await dbHelper.getPOScannedODetails1(widget.poNumber, widget.transNumber);
+    final List<Map<String, dynamic>> details1 = await dbHelper.getPOMasterScannedODetails1(widget.poNumber, widget.transNumber);
+    final List<Map<String, dynamic>> details2 = await dbHelper.getNoitemScannedODetails1(widget.poNumber, widget.transNumber);
+
+    print('scanned$details');
+    print('master$details1');
+    print('noitem$details2');
 
     final combinedDetails = [...details, ...details1, ...details2];
 
@@ -242,6 +248,7 @@ Future<void> fetchSummaryRecentNoPO() async {
 
     List<Map<String, dynamic>> dataScan = scannedResults.map((item) {
       return {
+        "transno": item['transno'],
         "pono": item['pono'],
         "itemsku": item['item_sku'],
         "skuname": item['item_name'],
@@ -265,6 +272,7 @@ if (noitemScannedResults.isNotEmpty) {
 }
     List<Map<String, dynamic>> dataScanOver = allResults.map((item1) {
       return {
+        "transno": item1['transno'],
         "pono": item1['pono'],
         "itemsku": item1['item_sku'],
         "skuname": item1['item_name'],
@@ -311,11 +319,13 @@ Map<String, List<Map<String, dynamic>>> groupSummaryByPONumber(List<Map<String, 
   final Map<String, List<Map<String, dynamic>>> groupedSummary = {};
 
   for (var item in summary) {
-    String pono = item['pono'];
-    if (!groupedSummary.containsKey(pono)) {
-      groupedSummary[pono] = [];
+    String transno = item['transno'];
+    
+    
+    if (!groupedSummary.containsKey(transno)) {
+      groupedSummary[transno] = [];
     }
-    groupedSummary[pono]!.add(item);
+    groupedSummary[transno]!.add(item);
   }
 
   return groupedSummary;
@@ -323,6 +333,7 @@ Map<String, List<Map<String, dynamic>>> groupSummaryByPONumber(List<Map<String, 
 
   Widget buildRecentPOSummary() {
     final groupedSummary = groupSummaryByPONumber(recentPOSummary);
+    print(recentPOSummary);
     final groupedSummary1 = groupSummaryByPONumber(recentMasterPOSummary);
     final groupedSummary2 = groupSummaryByPONumber(recentNoPOSummary);
 
@@ -330,14 +341,14 @@ Map<String, List<Map<String, dynamic>>> groupSummaryByPONumber(List<Map<String, 
 
  int grandTotal = 0; // Initialize grandTotal to 0
 
-if (groupedSummary.containsKey(widget.poNumber)) {
+if (groupedSummary.containsKey(widget.transNumber)) {
   // Only proceed if the key exists
-  grandTotal = groupedSummary[widget.poNumber]!.fold(0, (int sum, detail) {
+  grandTotal = groupedSummary[widget.transNumber]!.fold(0, (int sum, detail) {
     return sum + (detail['totalscan'] as int? ?? 0);
   });
 } else {
   // Optionally handle the case where the key does not exist
-  print('PO number ${widget.poNumber} not found in groupedSummary.');
+  print('PO number ${widget.transNumber} not found in groupedSummary.');
 }
 
  int calculateGrandTotal() {
@@ -345,20 +356,20 @@ if (groupedSummary.containsKey(widget.poNumber)) {
   int totalMaster = 0;
   int totalNoPO = 0;
 
-  if (groupedSummary1.containsKey(widget.poNumber)) {
-    totalMaster = groupedSummary1[widget.poNumber]!.fold(0, (sum, detail) {
+  if (groupedSummary1.containsKey(widget.transNumber)) {
+    totalMaster = groupedSummary1[widget.transNumber]!.fold(0, (sum, detail) {
       return sum + (detail['totalscan'] as int? ?? 0);
     });
   }
 
-  if (groupedSummary2.containsKey(widget.poNumber)) {
-    totalNoPO = groupedSummary2[widget.poNumber]!.fold(0, (sum, detail) {
+  if (groupedSummary2.containsKey(widget.transNumber)) {
+    totalNoPO = groupedSummary2[widget.transNumber]!.fold(0, (sum, detail) {
       return sum + (detail['totalscan'] as int? ?? 0);
     });
   }
 
   return totalMaster + totalNoPO;  
-}
+ }
 
 
   return Column(
@@ -428,6 +439,7 @@ if (groupedSummary.containsKey(widget.poNumber)) {
         scrollDirection: Axis.horizontal,
         child: DataTable(
           columns: const [
+            DataColumn(label: Text('Transno')),
             DataColumn(label: Text('PO NO')),
             DataColumn(label: Text('Item SKU')),
             DataColumn(label: Text('Item Name')),
@@ -437,8 +449,9 @@ if (groupedSummary.containsKey(widget.poNumber)) {
           ],
         rows: [
   // Check if the key exists in groupedSummary before accessing it
-  if (groupedSummary.containsKey(widget.poNumber)) ...groupedSummary[widget.poNumber]!.reversed.map((detail) {
+  if (groupedSummary.containsKey(widget.transNumber)) ...groupedSummary[widget.transNumber]!.reversed.map((detail) {
     return DataRow(cells: [
+                DataCell(Text(detail['transno'] ?? '')),
                 DataCell(Text(detail['pono'] ?? '')),
                 DataCell(Text(detail['item_sku'] ?? '')),
                 DataCell(Text(detail['item_name'] ?? '')),
@@ -475,6 +488,7 @@ Widget buildRecentNoPOSummary() {
         scrollDirection: Axis.horizontal,
         child: DataTable(
           columns: const [
+            DataColumn(label: Text('Transno')),
             DataColumn(label: Text('PO NO')),
             DataColumn(label: Text('Item SKU')),
             DataColumn(label: Text('Item Name')),
@@ -484,9 +498,10 @@ Widget buildRecentNoPOSummary() {
           ],
           rows: [
             // Check if groupedSummary1 contains widget.poNumber
-            if (groupedSummary1.containsKey(widget.poNumber))
-              ...groupedSummary1[widget.poNumber]!.reversed.map((detail) {
+            if (groupedSummary1.containsKey(widget.transNumber))
+              ...groupedSummary1[widget.transNumber]!.reversed.map((detail) {
                 return DataRow(cells: [
+                  DataCell(Text(detail['transno'] ?? '')),
                   DataCell(Text(detail['pono'] ?? '')),
                   DataCell(Text(detail['item_sku'] ?? '')),
                   DataCell(Text(detail['item_name'] ?? '')),
@@ -496,8 +511,8 @@ Widget buildRecentNoPOSummary() {
                 ]);
               }).toList(),
             // Check if groupedSummary2 contains widget.poNumber
-            if (groupedSummary2.containsKey(widget.poNumber))
-              ...groupedSummary2[widget.poNumber]!.reversed.map((detail) {
+            if (groupedSummary2.containsKey(widget.transNumber))
+              ...groupedSummary2[widget.transNumber]!.reversed.map((detail) {
                 return DataRow(cells: [
                   DataCell(Text(detail['pono'] ?? '')),
                   DataCell(Text(detail['item_sku'] ?? '')),
@@ -513,43 +528,163 @@ Widget buildRecentNoPOSummary() {
     ],
   );
 }
+Map<String, List<Map<String, dynamic>>> groupByTransno(List<Map<String, dynamic>> data) {
+  final Map<String, List<Map<String, dynamic>>> groupedData = {};
 
+  for (var item in data) {
+    String transno = item['transno'] ?? 'unknown';
+
+    // Memeriksa apakah transno sudah ada dalam map, jika belum tambahkan
+    if (!groupedData.containsKey(transno)) {
+      groupedData[transno] = [];
+    }
+    groupedData[transno]!.add(item);
+  }
+
+  return groupedData;
+}
 
   @override
-  Widget build(BuildContext context) {
+Widget build(BuildContext context) {
+  // Grupkan data sesuai transno
+  final groupedScannedResults = groupByTransno(scannedResults);
+  print('Data Scan $scannedResults');
+  final groupedNoItemScannedResults = groupByTransno(noitemScannedResults);
 
-    return Scaffold(
-      appBar: AppBar(
-         title: Text('${widget.poNumber}'),
-      ),
-      body: isLoading
-          ? Center(child: CircularProgressIndicator())
-          : poDetails.isEmpty
-              ? Center(child: Text('No details found for this PO'))
-              : SingleChildScrollView(
-                  scrollDirection: Axis.vertical,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                       buildRecentPOSummary(),
-                       buildRecentNoPOSummary(),
+  // // Hanya gunakan data dengan transno yang cocok
+  final filteredScannedResults = groupedScannedResults[widget.transNumber] ?? [];
+  print('Filter $filteredScannedResults');
+  final filteredNoItemScannedResults = groupedNoItemScannedResults[widget.transNumber] ?? [];
 
-                      SizedBox(height: 20),  
+  return Scaffold(
+    appBar: AppBar(
+      title: Text('${widget.transNumber}'),
+    ),
+    body: isLoading
+        ? const Center(child: CircularProgressIndicator())
+        : poDetails.isEmpty
+            ? const Center(child: Text('No details found for this PO'))
+            : SingleChildScrollView(
+                scrollDirection: Axis.vertical,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    buildRecentPOSummary(),
+                    buildRecentNoPOSummary(),
+                   
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: DataTable(
+                        columns: const [
+                          DataColumn(label: Text('Transno')),
+                          DataColumn(label: Text('PO NO')),
+                          DataColumn(label: Text('Item SKU')),
+                          DataColumn(label: Text('Item SKU Name')),
+                          DataColumn(label: Text('Barcode')),
+                          DataColumn(label: Text('VendorBarcode')),
+                          DataColumn(label: Text('QTY')),
+                          DataColumn(label: Text('AudUser')),
+                          DataColumn(label: Text('Type')),
+                          DataColumn(label: Text('AudDate')),
+                          DataColumn(label: Text('MachineCd')),
+                          DataColumn(label: Text('QTY Koli')),
+                          DataColumn(label: Text('Actions')),
+                        ],
+                        rows: filteredScannedResults.map((detail) {
+                          return DataRow(cells: [
+                            DataCell(Text(detail['transno'] ?? '')),
+                            DataCell(Text(detail['pono'] ?? '')),
+                            DataCell(Text(detail['item_sku'] ?? '')),
+                            DataCell(Text(detail['item_name'] ?? '')),
+                            DataCell(Text(detail['barcode'] ?? '')),
+                            DataCell(Text(detail['vendorbarcode'] ?? '')),
+                            DataCell(Text((detail['qty_scanned'] ?? 0).toString())),
+                            DataCell(Text(detail['user'] ?? '')),
+                            DataCell(Text(detail['type'] ?? '')),
+                            DataCell(Text(detail['scandate'] != null
+                                ? DateFormat('yyyy-MM-dd HH:mm:ss')
+                                    .format(DateTime.parse(detail['scandate']))
+                                : '')),
+                            DataCell(Text(detail['device_name'] ?? '')),
+                            DataCell(Text((detail['qty_koli'] ?? 0).toString())),
+                            DataCell(
+                              Row(
+                                children: [
+                                  TextButton(
+                                    onPressed: () {
+                                      _deleteScannedResult(detail['scandate'] ?? '');
+                                    },
+                                    child: const Icon(Icons.delete),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ]);
+                        }).toList(),
+                      ),
+                    ),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: DataTable(
+                        columns: const [
+                          DataColumn(label: Text('Transno')),
+                          DataColumn(label: Text('PO NO')),
+                          DataColumn(label: Text('Item SKU')),
+                          DataColumn(label: Text('Item SKU Name')),
+                          DataColumn(label: Text('Barcode')),
+                          DataColumn(label: Text('VendorBarcode')),
+                          DataColumn(label: Text('QTY')),
+                          DataColumn(label: Text('AudUser')),
+                          DataColumn(label: Text('Type')),
+                          DataColumn(label: Text('AudDate')),
+                          DataColumn(label: Text('MachineCd')),
+                          DataColumn(label: Text('QTY Koli')),
+                          DataColumn(label: Text('Actions')),
+                        ],
+                        rows: filteredNoItemScannedResults.map((detail) {
+                          return DataRow(cells: [
+                            DataCell(Text(detail['transno'] ?? '')),
+                            DataCell(Text(detail['pono'] ?? '')),
+                            DataCell(Text(detail['item_sku'] ?? '')),
+                            DataCell(Text(detail['item_name'] ?? '')),
+                            DataCell(Text(detail['barcode'] ?? '')),
+                            DataCell(Text(detail['vendorbarcode'] ?? '')),
+                            DataCell(Text((detail['qty_scanned'] ?? 0).toString())),
+                            DataCell(Text(detail['user'] ?? '')),
+                            DataCell(Text(detail['type'] ?? '')),
+                            DataCell(Text(detail['scandate'] != null
+                                ? DateFormat('yyyy-MM-dd HH:mm:ss')
+                                    .format(DateTime.parse(detail['scandate']))
+                                : '')),
+                            DataCell(Text(detail['device_name'] ?? '')),
+                            DataCell(Text((detail['qty_koli'] ?? 0).toString())),
+                            DataCell(
+                              Row(
+                                children: [
+                                  TextButton(
+                                    onPressed: () {
+                                      _deleteScannedNoItemResult(detail['scandate'] ?? '');
+                                    },
+                                    child: const Icon(Icons.delete),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ]);
+                        }).toList(),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
                     Center(
                       child: ElevatedButton(
                         onPressed: submitScannedResults,
                         child: const Text('Submit Results'),
                       ),
-                      
                     ),
-                    
-                    ],
-                  ),
-              )
-    );
-    
-
-
-    
-  }
+                  ],
+                ),
+              ),
+  );
 }
+}
+
