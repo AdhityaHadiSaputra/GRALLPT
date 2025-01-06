@@ -1,7 +1,10 @@
 {
     "modules": [],
+<<<<<<< HEAD
     "clean_architecture": false,
     "services": [],
+=======
+>>>>>>> 28e9271fe74f1a0e0c98250124fbbb0ad95cb60c
     "module_directory_name": "module",
     "experimental_mode": false,
     "learning_mode": false,
