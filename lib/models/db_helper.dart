@@ -51,6 +51,10 @@ class DatabaseHelper {
         CREATE TABLE po(
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           pono TEXT,
+<<<<<<< HEAD
+=======
+          transno TEXT,
+>>>>>>> 28e9271fe74f1a0e0c98250124fbbb0ad95cb60c
           item_sku TEXT,
           item_name TEXT,
           qty_po INTEGER,
@@ -68,6 +72,10 @@ class DatabaseHelper {
         '''
         CREATE TABLE scanned_results(
           id INTEGER PRIMARY KEY AUTOINCREMENT,
+<<<<<<< HEAD
+=======
+          transno TEXT,
+>>>>>>> 28e9271fe74f1a0e0c98250124fbbb0ad95cb60c
           pono TEXT,
           item_sku TEXT,
           item_name TEXT,
@@ -89,6 +97,10 @@ class DatabaseHelper {
         '''
         CREATE TABLE scanned_master(
           id INTEGER PRIMARY KEY AUTOINCREMENT,
+<<<<<<< HEAD
+=======
+          transno TEXT,
+>>>>>>> 28e9271fe74f1a0e0c98250124fbbb0ad95cb60c
           pono TEXT,
           item_sku TEXT,
           item_name TEXT,
@@ -110,6 +122,10 @@ class DatabaseHelper {
         '''
         CREATE TABLE noitems(
           id INTEGER PRIMARY KEY AUTOINCREMENT,
+<<<<<<< HEAD
+=======
+          transno TEXT,
+>>>>>>> 28e9271fe74f1a0e0c98250124fbbb0ad95cb60c
           pono TEXT,
           item_sku TEXT,
           item_name TEXT,
@@ -212,6 +228,13 @@ class DatabaseHelper {
         await db.execute(
           '''
           ALTER TABLE master_item ADD COLUMN vendorbarcode TEXT;
+<<<<<<< HEAD
+=======
+          ALTER TABLE scanned_results ADD COLUMN transno TEXT;
+          ALTER TABLE scanned_master ADD COLUMN transno TEXT;
+          ALTER TABLE noitems ADD COLUMN transno TEXT;
+          ALTER TABLE po ADD COLUMN transno TEXT;
+>>>>>>> 28e9271fe74f1a0e0c98250124fbbb0ad95cb60c
           ''',
         );
       }
@@ -344,16 +367,28 @@ class DatabaseHelper {
     final db = await database;
     return await db.query(
       'scanned_results',
+<<<<<<< HEAD
       where: 'pono = ? AND type = ?',
       whereArgs: [poNumber, scannedPOType],
     );
   }
+=======
+      where: 'transno = ? AND type = ?',
+      whereArgs: [poNumber, scannedPOType],
+    );
+  }
+  
+>>>>>>> 28e9271fe74f1a0e0c98250124fbbb0ad95cb60c
     Future<List<Map<String, dynamic>>> getScannedMasterPODetails(
       String poNumber) async {
     final db = await database;
     return await db.query(
       'scanned_master',
+<<<<<<< HEAD
       where: 'pono = ? AND type = ?',
+=======
+      where: 'transno = ? AND type = ?',
+>>>>>>> 28e9271fe74f1a0e0c98250124fbbb0ad95cb60c
       whereArgs: [poNumber, scannedPOType],
     );
   }
@@ -362,7 +397,11 @@ class DatabaseHelper {
     final db = await database;
     return await db.query(
       'noitems',
+<<<<<<< HEAD
       where: 'pono = ? AND type = ?',
+=======
+      where: 'transno = ? AND type = ?',
+>>>>>>> 28e9271fe74f1a0e0c98250124fbbb0ad95cb60c
       whereArgs: [poNumber, scannedPOType],
     );
   }
@@ -424,22 +463,40 @@ class DatabaseHelper {
   }
 
   Future<bool> poScannedExists(
+<<<<<<< HEAD
       String poNumber, String barcode, String scandate, String vendorbarcode) async {
     final db = await database;
     final result = await db.query(
       'scanned_results',
       where: 'pono = ? AND barcode = ? AND vendorbarcode = ? AND type = ? AND scandate = ?',
       whereArgs: [poNumber, barcode, vendorbarcode, scannedPOType, scandate],
+=======
+      String poNumber, String transno, String barcode, String scandate, String vendorbarcode) async {
+    final db = await database;
+    final result = await db.query(
+      'scanned_results',
+      where: 'transno = ? AND pono = ? AND barcode = ? AND vendorbarcode = ? AND type = ? AND scandate = ?',
+      whereArgs: [transno, poNumber, barcode, vendorbarcode, scannedPOType, scandate],
+>>>>>>> 28e9271fe74f1a0e0c98250124fbbb0ad95cb60c
     );
     return result.isNotEmpty;
   }
   Future<bool> poMasterScannedExists(
+<<<<<<< HEAD
       String poNumber, String barcode, String scandate, String vendorbarcode) async {
     final db = await database;
     final result = await db.query(
       'scanned_master',
       where: 'pono = ? AND barcode = ? AND vendorbarcode = ? AND type = ? AND scandate = ?',
       whereArgs: [poNumber, barcode, vendorbarcode, scannedPOType, scandate],
+=======
+      String poNumber,String transno, String barcode, String scandate, String vendorbarcode) async {
+    final db = await database;
+    final result = await db.query(
+      'scanned_master',
+      where: 'transno = ? AND pono = ? AND barcode = ? AND vendorbarcode = ? AND type = ? AND scandate = ?',
+      whereArgs: [transno, poNumber, barcode, vendorbarcode, scannedPOType, scandate],
+>>>>>>> 28e9271fe74f1a0e0c98250124fbbb0ad95cb60c
     );
     return result.isNotEmpty;
   }
