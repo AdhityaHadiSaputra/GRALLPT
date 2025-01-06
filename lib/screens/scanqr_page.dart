@@ -1,4 +1,9 @@
 
+<<<<<<< HEAD
+=======
+import 'dart:convert';
+
+>>>>>>> 28e9271fe74f1a0e0c98250124fbbb0ad95cb60c
 import 'package:another_flushbar/flushbar.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:device_info_plus/device_info_plus.dart';
@@ -42,6 +47,10 @@ class _ScanQRPageState extends State<ScanQRPage> {
   final TextEditingController _poNumberController =TextEditingController();
   final TextEditingController _barcodeController = TextEditingController();
   final TextEditingController _koliController = TextEditingController();
+<<<<<<< HEAD
+=======
+  final TextEditingController _transnoController = TextEditingController();
+>>>>>>> 28e9271fe74f1a0e0c98250124fbbb0ad95cb60c
   QRViewController? controller;
   String scannedBarcode = "";
   late String userId = '';
@@ -105,6 +114,7 @@ class _ScanQRPageState extends State<ScanQRPage> {
     await _audioPlayer.play(AssetSource('beep.mp3'));
   }
 
+<<<<<<< HEAD
     Future<void> fetchPOData(String pono) async {
     setState(() => isLoading = true);
     try {
@@ -183,6 +193,165 @@ class _ScanQRPageState extends State<ScanQRPage> {
     }
   }
 
+=======
+  //   Future<void> fetchPOData(String pono) async {
+  //   setState(() => isLoading = true);
+  //   try {
+  //     final userData = storageService.get(StorageKeys.USER);
+  //     final response = await apiservice.loginUser(
+  //       userData['USERID'],
+  //       userData['USERPASSWORD'],
+  //       userData['PT'],
+  //     );
+
+  //     if (response.containsKey('code')) {
+  //       final resultCode = response['code'];
+
+  //       if (resultCode == "1") {
+  //         final List<dynamic> msgList = response['msg'];
+  //         if (msgList.isNotEmpty && msgList[0] is Map<String, dynamic>) {
+  //           final Map<String, dynamic> msgMap = msgList[0] as Map<String, dynamic>;
+  //           userId = msgMap['USERID'];
+  //         }
+  //       } else {
+  //         print('Request failed with code $resultCode');
+  //         print(response["msg"]);
+  //       }
+  //     } else {
+  //       print('Unexpected response structure');
+  //     }
+  //   } catch (error) {
+  //     print('Error: $error');
+  //   }
+
+  //   try {
+  //     final response = await apiuser.fetchPO(pono);
+
+  //     if (response.containsKey('code') && response['code'] == '1') {
+  //       final msg = response['msg'];
+  //       final headerPO = msg['HeaderPO'];
+        
+  //       // Check if headerPO is empty to determine if the PO exists
+  //       if (headerPO.isEmpty) {
+  //         throw Exception('Nomor PO tidak ditemukan!'); // PO not found
+  //       }
+
+  //       final localPOs = await dbHelper.getPOScannedODetails(headerPO[0]['PONO']);
+  //       final scannedPOs = await dbHelper.getPOResultScannedDetails(headerPO[0]['PONO']);
+  //       final differentPOs = await dbHelper.getPODifferentScannedDetails(headerPO[0]['PONO']);
+  //       final noitemScanned = await dbHelper.getPONOItemsScannedDetails(headerPO[0]['PONO']);
+
+  //       scannedPOs.sort((a, b) {
+  //         return DateTime.parse(b['scandate']).compareTo(DateTime.parse(a['scandate']));
+  //       });
+
+  //       scannedResults = [...scannedPOs];
+  //       differentScannedResults = [...differentPOs];
+  //       noitemScannedResults = [...noitemScanned];
+  //       final detailPOList = List<Map<String, dynamic>>.from(msg['DetailPO']);
+
+  //       setState(() {
+  //         detailPOData = detailPOList.map((item) {
+  //           final product = localPOs.firstWhereOrNull((product) =>
+  //               product["barcode"] == item["BARCODENO"] ||
+  //               product["vendorbarcode"] == item["VENDORBARCODE"]);
+  //           if (product != null) {
+  //             item["QTYD"] = product["qty_different"];
+  //             item["QTYS"] = scannedPOs.isNotEmpty ? scannedPOs.length : product["qty_scanned"];
+  //           }
+  //           return item;
+  //         }).toList();
+  //       });
+  //     } else {
+  //       _showErrorSnackBar('Request failed: ${response['code']}');
+  //     }
+  //   } catch (error) {
+  //     _showErrorSnackBar('Error fetching PO: $error');
+  //   } finally {
+  //     setState(() => isLoading = false);
+  //   }
+  // }
+  Future<void> fetchPOData(String pono, String transno) async {
+  setState(() => isLoading = true);
+  try {
+    final userData = storageService.get(StorageKeys.USER);
+    final response = await apiservice.loginUser(
+      userData['USERID'],
+      userData['USERPASSWORD'],
+      userData['PT'],
+    );
+
+    if (response.containsKey('code')) {
+      final resultCode = response['code'];
+
+      if (resultCode == "1") {
+        final List<dynamic> msgList = response['msg'];
+        if (msgList.isNotEmpty && msgList[0] is Map<String, dynamic>) {
+          final Map<String, dynamic> msgMap = msgList[0] as Map<String, dynamic>;
+          userId = msgMap['USERID'];
+        }
+      } else {
+        print('Request failed with code $resultCode');
+        print(response["msg"]);
+      }
+    } else {
+      print('Unexpected response structure');
+    }
+  } catch (error) {
+    print('Error: $error');
+  }
+
+  try {
+    final response = await apiuser.fetchPO(pono);
+
+    if (response.containsKey('code') && response['code'] == '1') {
+      final msg = response['msg'];
+      final headerPO = msg['HeaderPO'];
+      
+      // Check if headerPO is empty to determine if the PO exists
+      if (headerPO.isEmpty) {
+        throw Exception('Nomor PO tidak ditemukan!'); // PO not found
+      }
+
+      // Mengambil data menggunakan PO number dan transno
+      final localPOs = await dbHelper.getPOScannedODetails(headerPO[0]['PONO'], transno);
+      final scannedPOs = await dbHelper.getPOResultScannedDetails(headerPO[0]['PONO'], transno);
+      final differentPOs = await dbHelper.getPODifferentScannedDetails(headerPO[0]['PONO'], transno);
+      final noitemScanned = await dbHelper.getPONOItemsScannedDetails(headerPO[0]['PONO'], transno);
+
+      scannedPOs.sort((a, b) {
+        return DateTime.parse(b['scandate']).compareTo(DateTime.parse(a['scandate']));
+      });
+
+      scannedResults = [...scannedPOs];
+      differentScannedResults = [...differentPOs];
+      noitemScannedResults = [...noitemScanned];
+      final detailPOList = List<Map<String, dynamic>>.from(msg['DetailPO']);
+
+      setState(() {
+        detailPOData = detailPOList.map((item) {
+          final product = localPOs.firstWhereOrNull((product) =>
+              product["barcode"] == item["BARCODENO"] ||
+              product["vendorbarcode"] == item["VENDORBARCODE"]);
+          if (product != null) {
+            item["QTYD"] = product["qty_different"];
+            item["QTYS"] = scannedPOs.isNotEmpty ? scannedPOs.length : product["qty_scanned"];
+          }
+          return item;
+        }).toList();
+      });
+    } else {
+      _showErrorSnackBar('Request failed: ${response['code']}');
+    }
+  } catch (error) {
+    _showErrorSnackBar('Error fetching PO: $error');
+  } finally {
+    setState(() => isLoading = false);
+  }
+}
+
+
+>>>>>>> 28e9271fe74f1a0e0c98250124fbbb0ad95cb60c
   void _showErrorSnackBar(String message) {
     Flushbar(
       message: message,
@@ -194,6 +363,11 @@ class _ScanQRPageState extends State<ScanQRPage> {
 
   Future<void> submitDataToDatabase() async {
     String poNumber = _poNumberController.text.trim();
+<<<<<<< HEAD
+=======
+    String transno = _transnoController.text.trim();
+await saveTransNoToRecent(transno);
+>>>>>>> 28e9271fe74f1a0e0c98250124fbbb0ad95cb60c
 
     if (poNumber.isEmpty) {
        Flushbar(
@@ -223,6 +397,10 @@ class _ScanQRPageState extends State<ScanQRPage> {
     for (var item in detailPOData) {
       final poData = {
         'pono': poNumber,
+<<<<<<< HEAD
+=======
+        'transno': transno,
+>>>>>>> 28e9271fe74f1a0e0c98250124fbbb0ad95cb60c
         'item_sku': item['ITEMSKU'],
         'item_name': item['ITEMSKUNAME'],
         'barcode': item['BARCODENO'],
@@ -269,7 +447,11 @@ class _ScanQRPageState extends State<ScanQRPage> {
   }
 
 Future<void> deleteRowByScandate(String pono, String scandate, String item_name) async {
+<<<<<<< HEAD
   await dbHelper.deleteScan(pono, scandate, item_name); 
+=======
+  await dbHelper.deleteScan(pono, scandate, item_name); // Backend call
+>>>>>>> 28e9271fe74f1a0e0c98250124fbbb0ad95cb60c
 
   setState(() {
     // Remove the item from the list locally
@@ -287,7 +469,11 @@ Future<void> deleteRowByScandate(String pono, String scandate, String item_name)
 }
 
 Future<void> deleteRowByScandateMaster(String pono, String scandate, String item_name) async {
+<<<<<<< HEAD
   await dbHelper.deleteScanMaster(pono, scandate, item_name); 
+=======
+  await dbHelper.deleteScanMaster(pono, scandate, item_name); // Backend call
+>>>>>>> 28e9271fe74f1a0e0c98250124fbbb0ad95cb60c
 
   setState(() {
     // Remove the item from the list locally
@@ -305,7 +491,11 @@ Future<void> deleteRowByScandateMaster(String pono, String scandate, String item
 }
 
 Future<void> deleteRowByScandateNoItems(String pono, String scandate, String item_name) async {
+<<<<<<< HEAD
   await dbHelper.deleteScanNoItems(pono, scandate, item_name); 
+=======
+  await dbHelper.deleteScanNoItems(pono, scandate, item_name); // Backend call
+>>>>>>> 28e9271fe74f1a0e0c98250124fbbb0ad95cb60c
 
   setState(() {
     // Remove the item from the list locally
@@ -324,7 +514,11 @@ Future<void> deleteRowByScandateNoItems(String pono, String scandate, String ite
 
 
 Future<void> checkAndSumQty(String scannedCode) async {
+<<<<<<< HEAD
    calculateTotalQtyScanned(); // Get the total scanned quantity
+=======
+  int totalQtyScanned = calculateTotalQtyScanned(); // Get the total scanned quantity
+>>>>>>> 28e9271fe74f1a0e0c98250124fbbb0ad95cb60c
 
   // Check if total scanned quantity has reached or exceeded 500
   // if (totalQtyScanned >= 5000) {
@@ -378,7 +572,11 @@ Future<void> checkAndSumQty(String scannedCode) async {
         flushbarPosition: FlushbarPosition.TOP,
         backgroundColor: Colors.red,
       ).show(context);
+<<<<<<< HEAD
       return; 
+=======
+      return; // Early return to prevent further processing
+>>>>>>> 28e9271fe74f1a0e0c98250124fbbb0ad95cb60c
     }
 
     // Update item quantities
@@ -392,6 +590,10 @@ Future<void> checkAndSumQty(String scannedCode) async {
     // Map the scanned PO data
     final mappedPO = {
       'pono': _poNumberController.text.trim(),
+<<<<<<< HEAD
+=======
+      'transno': _transnoController.text.trim(),
+>>>>>>> 28e9271fe74f1a0e0c98250124fbbb0ad95cb60c
       'item_sku': itemInPO['ITEMSKU'],
       'item_name': itemInPO['ITEMSKUNAME'],
       'barcode': itemInPO['BARCODENO'],
@@ -422,6 +624,10 @@ Future<void> checkAndSumQty(String scannedCode) async {
     if (masterItem != null) {
       final mappedMasterItem = {
         'pono': _poNumberController.text.trim(),
+<<<<<<< HEAD
+=======
+        'transno': _transnoController.text.trim(),
+>>>>>>> 28e9271fe74f1a0e0c98250124fbbb0ad95cb60c
         'item_sku': masterItem['item_sku'],
         'item_name': masterItem['item_name'],
         'barcode': masterItem['barcode'],
@@ -439,16 +645,31 @@ Future<void> checkAndSumQty(String scannedCode) async {
 
       differentScannedResults.insert(0, mappedMasterItem);
       savePOToRecent(_poNumberController.text);
+<<<<<<< HEAD
       setState(() {});
       await submitScannedMasterItemsResults();
     } else {
       
+=======
+      saveTransNoToRecent(_transnoController.text);
+        saveTransPoandTrans(jsonEncode({'transno':_transnoController.text,'pono':_poNumberController.text}));
+
+      setState(() {});
+      await submitScannedMasterItemsResults();
+    } else {
+      // If item not found in both PO and Master items, prompt for manual input
+>>>>>>> 28e9271fe74f1a0e0c98250124fbbb0ad95cb60c
       final itemName = await _promptManualItemNameInput(scannedCode);
 
       if (itemName != null && itemName.isNotEmpty) {
         final manualMasterItem = {
           'pono': _poNumberController.text.trim(),
+<<<<<<< HEAD
           'item_sku': '-', 
+=======
+          'transno': _transnoController.text.trim(),
+          'item_sku': '-', // Using scannedCode as SKU, you can change this as needed
+>>>>>>> 28e9271fe74f1a0e0c98250124fbbb0ad95cb60c
           'item_name': itemName,
           'barcode': scannedCode,
           'vendorbarcode': scannedCode,
@@ -465,6 +686,12 @@ Future<void> checkAndSumQty(String scannedCode) async {
 
         noitemScannedResults.insert(0, manualMasterItem);
         savePOToRecent(_poNumberController.text);
+<<<<<<< HEAD
+=======
+        saveTransNoToRecent(_transnoController.text);
+        saveTransPoandTrans(jsonEncode({'transno':_transnoController.text,'pono':_poNumberController.text}));
+
+>>>>>>> 28e9271fe74f1a0e0c98250124fbbb0ad95cb60c
         setState(() {});
         await submitScannedNoItemsResults();
       } else {
@@ -652,6 +879,7 @@ int calculateTotalQtyScanned() {
 
 
   Future<void> updatePO(Map<String, dynamic> item) async {
+<<<<<<< HEAD
     detailPOData = detailPOData.replaceOrAdd(
         item, (po) => po['BARCODE'] == item["BARCODE"]);
     setState(() {});
@@ -667,6 +895,68 @@ int calculateTotalQtyScanned() {
         recentNoPOs.replaceOrAdd(updatedPONO, (pono) => pono == updatedPONO);
     await prefs.setStringList('recent_pos', recentNoPOs);
   }
+=======
+  detailPOData = detailPOData.replaceOrAdd(
+    item,
+    (po) => po['BARCODE'] == item["BARCODE"],
+  );
+
+  setState(() {});
+  
+  // Prioritaskan TransNo
+  await saveTransNoToRecent(_transnoController.text);
+  await savePOToRecent(_poNumberController.text);
+  await saveTransPoandTrans(jsonEncode({'transno':_transnoController.text,'pono':_poNumberController.text}));
+  submitDataToDatabase();
+}
+
+  Future<void> saveTransPoandTrans(String updatedTransandPO) async {
+  final prefs = await SharedPreferences.getInstance();
+  List<String>? recentTransandPO = prefs.getStringList('recent_transandpo') ?? [];
+
+  // Prioritaskan TransNo
+  recentTransandPO = recentTransandPO.replaceOrAdd(
+    updatedTransandPO,
+    (transno) => transno == updatedTransandPO,
+  );
+
+  // Simpan kembali daftar TransNo yang diperbarui
+  await prefs.setStringList('recent_transandpo', recentTransandPO);
+}
+
+
+  Future<void> saveTransNoToRecent(String updatedTransNo) async {
+  final prefs = await SharedPreferences.getInstance();
+  List<String>? recentTransNos = prefs.getStringList('recent_transnos') ?? [];
+
+  // Prioritaskan TransNo
+  recentTransNos = recentTransNos.replaceOrAdd(
+    updatedTransNo,
+    (transno) => transno == updatedTransNo,
+  );
+
+  // Simpan kembali daftar TransNo yang diperbarui
+  await prefs.setStringList('recent_transnos', recentTransNos);
+}
+
+Future<void> savePOToRecent(String updatedPONO) async {
+  final prefs = await SharedPreferences.getInstance();
+  List<String>? recentNoPOs = prefs.getStringList('recent_pos') ?? [];
+
+  // Pastikan PONO disimpan, tetapi beri prioritas ke TransNo
+  List<String>? recentTransNos = prefs.getStringList('recent_transnos') ?? [];
+  if (recentTransNos.isNotEmpty) {
+    // Logika tambahan jika ingin memastikan TransNo muncul lebih dulu
+    recentNoPOs = recentNoPOs.replaceOrAdd(
+      updatedPONO,
+      (pono) => pono == updatedPONO,
+    );
+  }
+
+  await prefs.setStringList('recent_pos', recentNoPOs);
+}
+
+>>>>>>> 28e9271fe74f1a0e0c98250124fbbb0ad95cb60c
 
   void clearSession() {
   _poNumberController.clear();
@@ -677,6 +967,45 @@ int calculateTotalQtyScanned() {
   detailPOData.clear();
 }
 
+<<<<<<< HEAD
+=======
+String generateTransno() {
+  // Pastikan detailPOData tidak kosong dan elemen terakhir memiliki transno yang valid
+  String lastTransno = '';
+  if (detailPOData.isNotEmpty) {
+    var lastEntry = detailPOData.last;
+    if (lastEntry != null && lastEntry['transno'] != null) {
+      lastTransno = lastEntry['transno'];
+    }
+  }
+
+  // Cek apakah transno terakhir valid
+  if (lastTransno.isEmpty || !RegExp(r'^SC-\d{4}-\d{4}$').hasMatch(lastTransno)) {
+    // Jika tidak ada data sebelumnya atau format tidak valid, mulai dari SC-YYMM-0001
+    final now = DateTime.now();
+    final yearMonth = '${now.year % 100}${now.month.toString().padLeft(2, '0')}';
+    return 'SC-$yearMonth-0001';
+  }
+
+  // Pisahkan bagian transno terakhir
+  final parts = lastTransno.split('-');
+  final currentYearMonth = '${DateTime.now().year % 100}${DateTime.now().month.toString().padLeft(2, '0')}';
+
+  // Ambil nomor terakhir
+  final lastNumber = int.parse(parts.last);
+
+  // Jika format YYMM sekarang sama dengan transno terakhir
+  if (parts[1] == currentYearMonth) {
+    final newNumber = (lastNumber + 1).toString().padLeft(4, '0');
+    return 'SC-$currentYearMonth-$newNumber';
+  } else {
+    // Jika bulan atau tahun berbeda, mulai ulang dengan 0001
+    return 'SC-$currentYearMonth-0001';
+  }
+}
+
+
+>>>>>>> 28e9271fe74f1a0e0c98250124fbbb0ad95cb60c
 
   @override
   Widget build(BuildContext context) {
@@ -718,6 +1047,7 @@ int calculateTotalQtyScanned() {
                     inputFormatters: [UpperCaseTextFormatter()],
                   ),
                 ),
+<<<<<<< HEAD
                 const SizedBox(width: 10),
                 SizedBox(
                   width: 75,
@@ -728,10 +1058,36 @@ int calculateTotalQtyScanned() {
                       labelText: 'Koli',
                       border: OutlineInputBorder(),
                     ),
+=======
+                // const SizedBox(width: 10),
+                // SizedBox(
+                //   width: 75,
+                //   child: TextFormField(
+                //     controller: _koliController,
+                //     keyboardType: TextInputType.number,
+                //     decoration: const InputDecoration(
+                //       labelText: 'Koli',
+                //       border: OutlineInputBorder(),
+                //     ),
+                //   ),
+                // ),
+                const SizedBox(width: 10),
+                SizedBox(
+                  width: 120,
+                  child: TextFormField(
+                    controller: _transnoController,
+                    decoration: const InputDecoration(
+                      labelText: 'Transno',
+                      border: OutlineInputBorder(),
+                    ),
+        inputFormatters: [UpperCaseTextFormatter()],
+
+>>>>>>> 28e9271fe74f1a0e0c98250124fbbb0ad95cb60c
                   ),
                 ),
                     ElevatedButton(
           onPressed: () async {
+<<<<<<< HEAD
             String poNumber = _poNumberController.text.trim();
             if (poNumber.isNotEmpty) {
               // Show loading indicator
@@ -783,6 +1139,55 @@ int calculateTotalQtyScanned() {
               ).show(context);
             }
           },
+=======
+  String poNumber = _poNumberController.text.trim(); // Gunakan trim
+  String koli = _koliController.text.trim();
+  String transno = _transnoController.text.trim(); // Trim juga jika diperlukan
+   // Trim juga jika diperlukan
+  if (poNumber.isNotEmpty) {
+    setState(() {
+      isLoading = true;
+      scannedResults.clear();
+      differentScannedResults.clear();
+      noitemScannedResults.clear();
+      detailPOData.clear();
+    });
+
+    try {
+      await fetchPOData(poNumber,transno);
+      if (detailPOData.isNotEmpty) {
+        Flushbar(
+          message: 'PO berhasil terpanggil!',
+          duration: Duration(seconds: 3),
+          flushbarPosition: FlushbarPosition.TOP,
+          backgroundColor: Colors.green,
+        ).show(context);
+      } else {
+        throw Exception('Nomor PO tidak ditemukan!');
+      }
+    } catch (e) {
+      Flushbar(
+        message: e.toString(),
+        duration: Duration(seconds: 3),
+        flushbarPosition: FlushbarPosition.TOP,
+        backgroundColor: Colors.red,
+      ).show(context);
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
+    }
+  } else {
+    Flushbar(
+      message: 'Silakan masukkan nomor PO yang valid',
+      duration: Duration(seconds: 3),
+      flushbarPosition: FlushbarPosition.TOP,
+      backgroundColor: Colors.red,
+    ).show(context);
+  }
+},
+
+>>>>>>> 28e9271fe74f1a0e0c98250124fbbb0ad95cb60c
           child: const Icon(Icons.search),
         ),
 
@@ -797,6 +1202,7 @@ int calculateTotalQtyScanned() {
             const Text('Data PO Sudah Tersimpan')
           else
             const Text('Belum ada PO yang Tersimpan'),
+<<<<<<< HEAD
           
                const SizedBox(height: 20),
             
@@ -832,6 +1238,74 @@ int calculateTotalQtyScanned() {
         inputFormatters: [UpperCaseTextFormatter()],
          
             ),
+=======
+      
+    Row(
+  children: [
+    Expanded(
+      child: TextFormField(
+        controller: _barcodeController,
+        decoration: const InputDecoration(
+          labelText: 'Enter Barcode',
+          border: OutlineInputBorder(),
+        ),
+        focusNode: textsecond,
+        enabled: _poNumberController.text.isNotEmpty && _transnoController.text.isNotEmpty,
+        onFieldSubmitted: (value) {
+          FocusScope.of(context).requestFocus(textsecond);
+          if (value.isNotEmpty) {
+            checkAndSumQty(value);
+            Future.delayed(Duration(milliseconds: 100), () {
+              _barcodeController.clear();
+            });
+          } else {
+            Flushbar(
+              message: 'Please enter a valid barcode',
+              duration: Duration(seconds: 3),
+              flushbarPosition: FlushbarPosition.TOP,
+              backgroundColor: Colors.red,
+            ).show(context);
+          }
+        },
+        inputFormatters: [UpperCaseTextFormatter()],
+      ),
+    ),
+    const SizedBox(width: 10),
+    SizedBox(
+      width: 75,
+      child: TextFormField(
+        controller: _koliController,
+        keyboardType: TextInputType.number,
+        decoration: const InputDecoration(
+          labelText: 'Koli',
+          border: OutlineInputBorder(),
+        ),
+      ),
+    ),
+     const SizedBox(width: 10),
+ ElevatedButton(
+  onPressed: () {
+    setState(() {
+      String newTransno = generateTransno(); // Generate Transno baru
+      _transnoController.text = newTransno;  // Masukkan transno baru ke text controller
+      detailPOData.add({'transno': newTransno, 'otherField': 'value'});  // Menambahkan entri baru ke detailPOData
+
+      _poNumberController.clear(); // Kosongkan PO Number
+      _koliController.clear(); // Kosongkan Koli
+      scannedResults.clear(); // Kosongkan scannedResults
+      differentScannedResults.clear(); // Kosongkan differentScannedResults
+      noitemScannedResults.clear(); // Kosongkan noitemScannedResults
+    });
+  },
+  child: const Text('New'),
+),
+
+
+
+  ],
+),
+
+>>>>>>> 28e9271fe74f1a0e0c98250124fbbb0ad95cb60c
          
                           const SizedBox(height: 20),
                           Expanded(
@@ -850,11 +1324,20 @@ int calculateTotalQtyScanned() {
     controller: ScrollController(),
     child: DataTable(
     columns: const [
+<<<<<<< HEAD
     DataColumn(label: Text('PO Number')),
     DataColumn(label: Text('VendorBarcode')),
     DataColumn(label: Text('Item Name')),
     DataColumn(label: Text('Barcode')),
     DataColumn(label: Text('Item SKU')),
+=======
+    DataColumn(label: Text('Transno')),
+    DataColumn(label: Text('PO Number')),
+    DataColumn(label: Text('Item SKU')),
+    DataColumn(label: Text('Item Name')),
+    DataColumn(label: Text('Barcode')),
+    DataColumn(label: Text('VendorBarcode')),
+>>>>>>> 28e9271fe74f1a0e0c98250124fbbb0ad95cb60c
     DataColumn(label: Text('Qty Scanned')),
     // DataColumn(label: Text('User')),
     // DataColumn(label: Text('Device')),
@@ -877,11 +1360,20 @@ int calculateTotalQtyScanned() {
 
       return DataRow(
         cells: [
+<<<<<<< HEAD
           DataCell(Text(result['pono'] ?? '')),
           DataCell(Text(result['vendorbarcode'] ?? '')),
           DataCell(Text(result['item_name'] ?? '')),
           DataCell(Text(result['barcode'] ?? '')),
           DataCell(Text(result['item_sku'] ?? '')),
+=======
+          DataCell(Text(result['transno'] ?? '')),
+          DataCell(Text(result['pono'] ?? '')),
+          DataCell(Text(result['item_sku'] ?? '')),
+          DataCell(Text(result['item_name'] ?? '')),
+          DataCell(Text(result['barcode'] ?? '')),
+          DataCell(Text(result['vendorbarcode'] ?? '')),
+>>>>>>> 28e9271fe74f1a0e0c98250124fbbb0ad95cb60c
           DataCell(
             TextFormField(
               controller: _controllers[index],
@@ -983,6 +1475,10 @@ int calculateTotalQtyScanned() {
       return DataRow(
       color: MaterialStateProperty.all(Colors.orange[100]),
       cells: [
+<<<<<<< HEAD
+=======
+        DataCell(Text(mutableResult['transno'] ?? '')),
+>>>>>>> 28e9271fe74f1a0e0c98250124fbbb0ad95cb60c
         DataCell(Text(mutableResult['pono'] ?? '')),
         DataCell(Text(mutableResult['item_sku'] ?? '')),
         DataCell(Text(mutableResult['item_name'] ?? '')),
@@ -1082,6 +1578,10 @@ int calculateTotalQtyScanned() {
       return DataRow(
       color: MaterialStateProperty.all(Colors.red[200]),
       cells: [
+<<<<<<< HEAD
+=======
+        DataCell(Text(mutableResult['transno'] ?? '')),
+>>>>>>> 28e9271fe74f1a0e0c98250124fbbb0ad95cb60c
         DataCell(Text(mutableResult['pono'] ?? '')),
         DataCell(Text(mutableResult['item_sku'] ?? '')),
         DataCell(Text(mutableResult['item_name'] ?? '')),
@@ -1178,7 +1678,11 @@ int calculateTotalQtyScanned() {
    
       const SizedBox(height: 20),
      ElevatedButton(
+<<<<<<< HEAD
   onPressed: (_poNumberController.text.isNotEmpty && _koliController.text.isNotEmpty)
+=======
+  onPressed: (_poNumberController.text.isNotEmpty && _transnoController.text.isNotEmpty)
+>>>>>>> 28e9271fe74f1a0e0c98250124fbbb0ad95cb60c
       ? () {
           Navigator.push(
             context,

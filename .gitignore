@@ -41,5 +41,8 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+<<<<<<< HEAD
 
 .vscode/templates
+=======
+>>>>>>> 28e9271fe74f1a0e0c98250124fbbb0ad95cb60c
